@@ -8,7 +8,6 @@
 import Config
 
 config :hortator,
-  ecto_repos: [Core.Repo],
   generators: [timestamp_type: :utc_datetime]
 
 # Configure the endpoint
@@ -21,15 +20,6 @@ config :hortator, Web.Endpoint,
   ],
   pubsub_server: Core.PubSub,
   live_view: [signing_salt: "vhCKIdYc"]
-
-# Configure the mailer
-#
-# By default it uses the "Local" adapter which stores the emails
-# locally. You can see the emails in your browser, at "/dev/mailbox".
-#
-# For production it's recommended to configure a different adapter
-# at the `config/runtime.exs`.
-config :hortator, Core.Mailer, adapter: Swoosh.Adapters.Local
 
 # Configure esbuild (the version is required)
 config :esbuild,

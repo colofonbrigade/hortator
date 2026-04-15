@@ -3,23 +3,18 @@ defmodule Core.Application do
   # for more information on OTP Applications
   @moduledoc false
 
+  use Boundary, top_level?: true, deps: [Core, Web]
   use Application
 
   @impl true
   def start(_type, _args) do
     children = [
       Web.Telemetry,
-      Core.Repo,
       {DNSCluster, query: Application.get_env(:hortator, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: Core.PubSub},
-      # Start a worker by calling: Core.Worker.start_link(arg)
-      # {Core.Worker, arg},
-      # Start to serve requests, typically the last entry
       Web.Endpoint
     ]
 
-    # See https://hexdocs.pm/elixir/Supervisor.html
-    # for other strategies and supported options
     opts = [strategy: :one_for_one, name: Core.Supervisor]
     Supervisor.start_link(children, opts)
   end
