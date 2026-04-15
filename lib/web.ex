@@ -1,5 +1,5 @@
 defmodule Web do
-  use Boundary, deps: [Core], exports: [Endpoint]
+  use Boundary, deps: [Core, Utils], exports: [Endpoint]
 
   @moduledoc """
   The entrypoint for defining your web interface, such

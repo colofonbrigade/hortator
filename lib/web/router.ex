@@ -17,13 +17,19 @@ defmodule Web.Router do
   scope "/", Web do
     pipe_through :browser
 
-    get "/", PageController, :home
+    live "/", DashboardLive, :index
   end
 
-  # Other scopes may use custom stacks.
-  # scope "/api", Web do
-  #   pipe_through :api
-  # end
+  scope "/api/v1", Web do
+    pipe_through :api
+
+    get "/state", ObservabilityApiController, :state
+    post "/refresh", ObservabilityApiController, :refresh
+    get "/:issue_identifier", ObservabilityApiController, :issue
+    match :*, "/state", ObservabilityApiController, :method_not_allowed
+    match :*, "/refresh", ObservabilityApiController, :method_not_allowed
+    match :*, "/:issue_identifier", ObservabilityApiController, :method_not_allowed
+  end
 
   # Enable LiveDashboard in development
   if Application.compile_env(:hortator, :dev_routes) do

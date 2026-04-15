@@ -23,7 +23,9 @@ config :hortator, Web.Endpoint,
     layout: false
   ],
   pubsub_server: Core.PubSub,
-  live_view: [signing_salt: "vhCKIdYc"]
+  live_view: [signing_salt: "vhCKIdYc"],
+  orchestrator: Core.Orchestrator,
+  snapshot_timeout_ms: 15_000
 
 # Configure esbuild (the version is required)
 config :esbuild,
