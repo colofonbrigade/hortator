@@ -38,7 +38,7 @@ defmodule CLI.StatusDashboard.AgentMessage do
   end
 
   ## Event-level dispatch — matches the on_message :event tag emitted by
-  ## Claude.Session (:session_started, :notification, :turn_completed,
+  ## Agents.Claude.Session (:session_started, :notification, :turn_completed,
   ## :turn_failed, :turn_ended_with_error, :startup_failed). Returns nil
   ## for events that should fall through to payload-level dispatch.
 

@@ -1,8 +1,8 @@
-defmodule Linear.ResponseDecoder do
+defmodule Trackers.Linear.ResponseDecoder do
   @moduledoc """
   Pure decoders that map Linear GraphQL payloads into `Schema.Tracker.Issue`
   structs and related value types. Stateless and side-effect free — all HTTP
-  lives in `Linear.Client`.
+  lives in `Trackers.Linear.Client`.
   """
 
   alias Schema.Tracker.Issue

@@ -4,7 +4,7 @@ defmodule Core.AgentRunner do
   """
 
   require Logger
-  alias Claude.Session
+  alias Agents.Claude.Session
   alias Core.{Config, PromptBuilder, Tracker, Workspace}
   alias Schema.Tracker.Issue
 

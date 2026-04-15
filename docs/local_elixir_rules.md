@@ -12,13 +12,14 @@ this file wins locally; consider whether the divergence should be upstreamed.
   `Schema`.
 - `Schema` — Shared structs used across boundaries (`Schema.Snapshot`, `Schema.Tracker.Issue`).
   Leaf: depends on nothing in-app.
-- `Linear` — Linear tracker integration (GraphQL client, response decoder, tracker adapter).
-  Implements `Linear.Tracker` (behaviour) which `Core.Tracker` dispatches to, threading
-  tracker settings in at call time. Owned by the integration, not the domain core, so a
-  second tracker could be added as a peer boundary without touching `Core` internals.
-- `Claude` — Claude Code subprocess/SSH session client. Decoupled from Core: callers pass
-  `claude` settings and `workspace_root` into `Claude.Session.start_session/2` rather than
-  `Claude` reading Application env itself. Depends on `Permissions` + `Transport`.
+- `Trackers` — Issue tracker integrations. Today: `Trackers.Linear` (GraphQL client, response
+  decoder, tracker adapter). Implements `Trackers.Linear.Tracker` (behaviour) which `Core.Tracker`
+  dispatches to, threading tracker settings in at call time. Future home for peer trackers
+  (GitHub, Jira, etc.) without touching `Core` internals.
+- `Agents` — Agent backends. Today: `Agents.Claude` (Claude Code subprocess/SSH session client).
+  Decoupled from Core: callers pass `claude` settings and `workspace_root` into
+  `Agents.Claude.Session.start_session/2` rather than the backend reading Application env itself.
+  Depends on `Permissions` + `Transport`. Future home for peer backends (Codex, etc.).
 - `Transport` — Low-level communication primitives. Today: `Transport.SSH`. Future home for
   other transports (gRPC, MQTT, etc.). Leaf-ish: reads `:ssh_config` from Application env,
   no in-app deps.

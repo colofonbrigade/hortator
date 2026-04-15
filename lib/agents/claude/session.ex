@@ -1,4 +1,4 @@
-defmodule Claude.Session do
+defmodule Agents.Claude.Session do
   @moduledoc """
   Long-running client for the Claude Code stream-json subprocess.
 

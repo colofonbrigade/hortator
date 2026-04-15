@@ -4,7 +4,7 @@ defmodule Core.Tracker do
   tracker settings (api_key, endpoint, project_slug, active_states,
   assignee) in on every call.
 
-  The adapter contract lives in `Linear.Tracker`; `Linear.Adapter` is the
+  The adapter contract lives in `Trackers.Linear.Tracker`; `Trackers.Linear.Adapter` is the
   production implementer wired in by `config/config.exs`. `config/test.exs`
   overrides the adapter to `Test.Tracker.Memory` so tests don't hit the real
   Linear backend.

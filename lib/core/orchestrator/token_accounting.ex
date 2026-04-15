@@ -8,7 +8,7 @@ defmodule Core.Orchestrator.TokenAccounting do
   or state map and returns an updated one.
   """
 
-  alias Claude.Usage
+  alias Agents.Claude.Usage
 
   @empty_totals %{
     input_tokens: 0,
@@ -202,7 +202,7 @@ defmodule Core.Orchestrator.TokenAccounting do
   end
 
   # Claude Code's `usage` shape always uses string keys with integer values
-  # (see `Claude.Session.extract_usage/1`). Cache breakdown fields exist but
+  # (see `Agents.Claude.Session.extract_usage/1`). Cache breakdown fields exist but
   # are intentionally not rolled into the running totals here.
   defp get_token_usage(usage, :input), do: read_token_count(usage, "input_tokens")
   defp get_token_usage(usage, :output), do: read_token_count(usage, "output_tokens")

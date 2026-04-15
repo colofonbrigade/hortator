@@ -6,7 +6,7 @@ defmodule Core do
   """
 
   use Boundary,
-    deps: [CLI, Schema, Permissions, Transport, Claude, Utils],
+    deps: [CLI, Schema, Permissions, Transport, Agents, Trackers, Utils],
     exports: [
       AgentRunner,
       CLI,

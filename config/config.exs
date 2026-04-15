@@ -10,7 +10,7 @@ import Config
 config :hortator,
   generators: [timestamp_type: :utc_datetime]
 
-config :hortator, Core.Tracker, adapter: Linear.Adapter
+config :hortator, Core.Tracker, adapter: Trackers.Linear.Adapter
 
 config :hortator, Core.StatusDashboard, render: true
 

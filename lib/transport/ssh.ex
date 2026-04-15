@@ -1,12 +1,12 @@
 defmodule Transport.SSH do
   @moduledoc """
-  SSH command and port launcher. Other boundaries (`Core`, `Claude`) call this
+  SSH command and port launcher. Other boundaries (`Core`, `Agents`) call this
   to run shell commands or open long-lived streams against a remote worker.
 
   Configuration: reads optional `ssh_config` path via `Utils.Runtime.get/2`,
   which walks the process tree (for per-test `Process.put` overrides) and
   falls back to Application env (set by `config/runtime.exs` from
-  `SYMPHONY_SSH_CONFIG`).
+  `HORTATOR_SSH_CONFIG`).
   """
 
   @spec run(String.t(), String.t(), keyword()) :: {:ok, {String.t(), non_neg_integer()}} | {:error, term()}

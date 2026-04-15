@@ -1,6 +1,6 @@
-defmodule Linear.Tracker do
+defmodule Trackers.Linear.Tracker do
   @moduledoc """
-  Behaviour implemented by Linear-shaped tracker adapters. `Linear.Adapter` is
+  Behaviour implemented by Linear-shaped tracker adapters. `Trackers.Linear.Adapter` is
   the production implementer. Test doubles (see `test/support/tracker_memory.ex`)
   implement the same callbacks so `Core.Tracker` can dispatch to them without
   knowing which one is live.
@@ -8,7 +8,7 @@ defmodule Linear.Tracker do
   Every callback takes a tracker `settings` map as its first argument.
   `Core.Tracker` builds this from workflow config on each dispatch so the
   adapter and its client never read from `Core.Config` directly — this keeps
-  Linear's boundary deps at `[Schema]` (plus the `Linear.Tracker` behaviour
+  Linear's boundary deps at `[Schema]` (plus the `Trackers.Linear.Tracker` behaviour
   itself) and lets other implementations work without touching Core internals.
   """
 

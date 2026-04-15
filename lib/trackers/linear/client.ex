@@ -1,10 +1,10 @@
-defmodule Linear.Client do
+defmodule Trackers.Linear.Client do
   @moduledoc """
   Thin Linear GraphQL client for polling candidate issues.
   """
 
   require Logger
-  alias Linear.ResponseDecoder
+  alias Trackers.Linear.ResponseDecoder
   alias Schema.Tracker.Issue
 
   @issue_page_size 50
@@ -104,7 +104,7 @@ defmodule Linear.Client do
   }
   """
 
-  @spec fetch_candidate_issues(Linear.Tracker.settings()) :: {:ok, [Issue.t()]} | {:error, term()}
+  @spec fetch_candidate_issues(Trackers.Linear.Tracker.settings()) :: {:ok, [Issue.t()]} | {:error, term()}
   def fetch_candidate_issues(settings) do
     project_slug = Map.get(settings, :project_slug)
 
@@ -122,7 +122,7 @@ defmodule Linear.Client do
     end
   end
 
-  @spec fetch_issues_by_states(Linear.Tracker.settings(), [String.t()]) ::
+  @spec fetch_issues_by_states(Trackers.Linear.Tracker.settings(), [String.t()]) ::
           {:ok, [Issue.t()]} | {:error, term()}
   def fetch_issues_by_states(settings, state_names) when is_list(state_names) do
     normalized_states = Enum.map(state_names, &to_string/1) |> Enum.uniq()
@@ -155,7 +155,7 @@ defmodule Linear.Client do
       lookup requires a real endpoint) and pages through `ids` using the supplied
       fun. Used by tests that exercise pagination without hitting Linear.
   """
-  @spec fetch_issue_states_by_ids(Linear.Tracker.settings(), [String.t()], keyword()) ::
+  @spec fetch_issue_states_by_ids(Trackers.Linear.Tracker.settings(), [String.t()], keyword()) ::
           {:ok, [Issue.t()]} | {:error, term()}
   def fetch_issue_states_by_ids(settings, issue_ids, opts \\ []) when is_list(issue_ids) do
     ids = Enum.uniq(issue_ids)
@@ -174,7 +174,7 @@ defmodule Linear.Client do
     end
   end
 
-  @spec graphql(Linear.Tracker.settings(), String.t(), map(), keyword()) ::
+  @spec graphql(Trackers.Linear.Tracker.settings(), String.t(), map(), keyword()) ::
           {:ok, map()} | {:error, term()}
   def graphql(settings, query, variables \\ %{}, opts \\ [])
       when is_binary(query) and is_map(variables) and is_list(opts) do

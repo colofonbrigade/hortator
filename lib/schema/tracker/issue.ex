@@ -1,6 +1,6 @@
 defmodule Schema.Tracker.Issue do
   @moduledoc """
-  Normalized tracker issue. Producers (tracker adapters such as `Linear`)
+  Normalized tracker issue. Producers (tracker adapters such as `Trackers.Linear`)
   decode their source-specific payloads into this struct; consumers (Core's
   orchestrator, prompt builder, memory tracker; Web's presenter) work with
   `%Schema.Tracker.Issue{}` without knowing which tracker it came from.
