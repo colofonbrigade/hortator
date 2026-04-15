@@ -5,7 +5,7 @@ import Config
 # The MIX_TEST_PARTITION environment variable can be used
 # to provide built-in test partitioning in CI environment.
 # Run `mix help test` for more information.
-config :hortator, Hortator.Repo,
+config :hortator, Core.Repo,
   username: "postgres",
   password: "postgres",
   hostname: "localhost",
@@ -15,13 +15,13 @@ config :hortator, Hortator.Repo,
 
 # We don't run a server during test. If one is required,
 # you can enable the server option below.
-config :hortator, HortatorWeb.Endpoint,
+config :hortator, Web.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: 4002],
   secret_key_base: "GSI6UjhpN0uQLk7TIJn68bQU3P6DQYBJqayiEo/loBDW+SWtm+O+RHH6UGqLFwXD",
   server: false
 
 # In test we don't send emails
-config :hortator, Hortator.Mailer, adapter: Swoosh.Adapters.Test
+config :hortator, Core.Mailer, adapter: Swoosh.Adapters.Test
 
 # Disable swoosh api client as it is only required for production adapters
 config :swoosh, :api_client, false

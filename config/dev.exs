@@ -1,7 +1,7 @@
 import Config
 
 # Configure your database
-config :hortator, Hortator.Repo,
+config :hortator, Core.Repo,
   username: "postgres",
   password: "postgres",
   hostname: "localhost",
@@ -16,7 +16,7 @@ config :hortator, Hortator.Repo,
 # The watchers configuration can be used to run external
 # watchers to your application. For example, we can use it
 # to bundle .js and .css sources.
-config :hortator, HortatorWeb.Endpoint,
+config :hortator, Web.Endpoint,
   # Binding to loopback ipv4 address prevents access from other machines.
   # Change to `ip: {0, 0, 0, 0}` to allow access from other machines.
   http: [ip: {127, 0, 0, 1}],
@@ -53,7 +53,7 @@ config :hortator, HortatorWeb.Endpoint,
 # different ports.
 
 # Reload browser tabs when matching files change.
-config :hortator, HortatorWeb.Endpoint,
+config :hortator, Web.Endpoint,
   live_reload: [
     web_console_logger: true,
     patterns: [
@@ -62,8 +62,8 @@ config :hortator, HortatorWeb.Endpoint,
       # Gettext translations
       ~r"priv/gettext/.*\.po$"E,
       # Router, Controllers, LiveViews and LiveComponents
-      ~r"lib/hortator_web/router\.ex$"E,
-      ~r"lib/hortator_web/(controllers|live|components)/.*\.(ex|heex)$"E
+      ~r"lib/web/router\.ex$"E,
+      ~r"lib/web/(controllers|live|components)/.*\.(ex|heex)$"E
     ]
   ]
 

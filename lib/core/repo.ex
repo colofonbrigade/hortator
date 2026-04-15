@@ -1,4 +1,4 @@
-defmodule Hortator.Repo do
+defmodule Core.Repo do
   use Ecto.Repo,
     otp_app: :hortator,
     adapter: Ecto.Adapters.Postgres

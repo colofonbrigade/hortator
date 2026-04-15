@@ -1,9 +1,9 @@
-defmodule HortatorWeb.Layouts do
+defmodule Web.Layouts do
   @moduledoc """
   This module holds layouts and related functionality
   used by your application.
   """
-  use HortatorWeb, :html
+  use Web, :html
 
   # Embed all files in layouts/* within this module.
   # The default root.html.heex file contains the HTML

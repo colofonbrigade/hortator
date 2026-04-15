@@ -1,3 +1,3 @@
-defmodule Hortator.Mailer do
+defmodule Core.Mailer do
   use Swoosh.Mailer, otp_app: :hortator
 end

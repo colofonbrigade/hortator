@@ -1,4 +1,4 @@
-defmodule HortatorWeb.Endpoint do
+defmodule Web.Endpoint do
   use Phoenix.Endpoint, otp_app: :hortator
 
   # The session will be stored in the cookie and signed,
@@ -24,7 +24,7 @@ defmodule HortatorWeb.Endpoint do
     at: "/",
     from: :hortator,
     gzip: not code_reloading?,
-    only: HortatorWeb.static_paths(),
+    only: Web.static_paths(),
     raise_on_missing_only: code_reloading?
 
   # Code reloading can be explicitly enabled under the
@@ -51,5 +51,5 @@ defmodule HortatorWeb.Endpoint do
   plug Plug.MethodOverride
   plug Plug.Head
   plug Plug.Session, @session_options
-  plug HortatorWeb.Router
+  plug Web.Router
 end

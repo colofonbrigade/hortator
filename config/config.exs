@@ -8,18 +8,18 @@
 import Config
 
 config :hortator,
-  ecto_repos: [Hortator.Repo],
+  ecto_repos: [Core.Repo],
   generators: [timestamp_type: :utc_datetime]
 
 # Configure the endpoint
-config :hortator, HortatorWeb.Endpoint,
+config :hortator, Web.Endpoint,
   url: [host: "localhost"],
   adapter: Bandit.PhoenixAdapter,
   render_errors: [
-    formats: [html: HortatorWeb.ErrorHTML, json: HortatorWeb.ErrorJSON],
+    formats: [html: Web.ErrorHTML, json: Web.ErrorJSON],
     layout: false
   ],
-  pubsub_server: Hortator.PubSub,
+  pubsub_server: Core.PubSub,
   live_view: [signing_salt: "vhCKIdYc"]
 
 # Configure the mailer
@@ -29,7 +29,7 @@ config :hortator, HortatorWeb.Endpoint,
 #
 # For production it's recommended to configure a different adapter
 # at the `config/runtime.exs`.
-config :hortator, Hortator.Mailer, adapter: Swoosh.Adapters.Local
+config :hortator, Core.Mailer, adapter: Swoosh.Adapters.Local
 
 # Configure esbuild (the version is required)
 config :esbuild,
