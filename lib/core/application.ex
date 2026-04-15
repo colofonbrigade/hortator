@@ -8,15 +8,27 @@ defmodule Core.Application do
 
   @impl true
   def start(_type, _args) do
+    :ok = Core.LogFile.configure()
+
     children = [
       Web.Telemetry,
       {DNSCluster, query: Application.get_env(:hortator, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: Core.PubSub},
+      {Task.Supervisor, name: Core.TaskSupervisor},
+      Core.WorkflowStore,
+      Core.Orchestrator,
+      Core.StatusDashboard,
       Web.Endpoint
     ]
 
     opts = [strategy: :one_for_one, name: Core.Supervisor]
     Supervisor.start_link(children, opts)
+  end
+
+  @impl true
+  def stop(_state) do
+    Core.StatusDashboard.render_offline_status()
+    :ok
   end
 
   # Tell Phoenix to update the endpoint configuration

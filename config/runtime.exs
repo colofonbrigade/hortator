@@ -1,27 +1,54 @@
 import Config
 
-# config/runtime.exs is executed for all environments, including
-# during releases. It is executed after compilation and before the
-# system starts, so it is typically used to load production configuration
-# and secrets from environment variables or elsewhere. Do not define
-# any compile-time configuration in here, as it won't be applied.
-# The block below contains prod specific runtime configuration.
+# config/runtime.exs runs after compilation and before the system starts.
+# Functions called here must be pure: no Application env reads, no GenServer
+# calls, no side effects beyond file I/O. See docs/elixir_rules.md §
+# "Runtime configuration".
 
-# ## Using releases
-#
-# If you use `mix release`, you need to explicitly enable the server
-# by passing the PHX_SERVER=true when you start it:
-#
-#     PHX_SERVER=true bin/hortator start
-#
-# Alternatively, you can use `mix phx.gen.release` to generate a `bin/server`
-# script that automatically sets the env var above.
 if System.get_env("PHX_SERVER") do
   config :hortator, Web.Endpoint, server: true
 end
 
 config :hortator, Web.Endpoint,
   http: [port: String.to_integer(System.get_env("PORT", "4000"))]
+
+# Optional SSH config file path. `Transport.SSH` reads it from Application env.
+config :hortator, :ssh_config, System.get_env("HORTATOR_SSH_CONFIG")
+
+# Workflow-driven endpoint config. The entry point (escript `bin/hort`,
+# `Core.CLI`) sets HORTATOR_WORKFLOW_FILE via `System.put_env/2` before
+# invoking the runtime so this block can load the workflow and populate
+# Application env for the endpoint.
+case System.get_env("HORTATOR_WORKFLOW_FILE") do
+  nil ->
+    :ok
+
+  path ->
+    expanded = Path.expand(path)
+    config :hortator, :workflow_file_path, expanded
+
+    # Core.Workflow.load/1 is pure: reads the file, parses YAML, expands $VAR
+    # references via System.get_env. Nothing else.
+    case Core.Workflow.load(expanded) do
+      {:ok, %{config: %{"server" => %{"port" => port} = server}}}
+      when is_integer(port) and port >= 0 ->
+        host = Map.get(server, "host", "127.0.0.1")
+
+        ip =
+          case host |> String.to_charlist() |> :inet.parse_address() do
+            {:ok, ip} -> ip
+            {:error, _} -> {127, 0, 0, 1}
+          end
+
+        config :hortator, Web.Endpoint,
+          server: true,
+          http: [ip: ip, port: port],
+          url: [host: host]
+
+      _ ->
+        :ok
+    end
+end
 
 if config_env() == :prod do
   # The secret key base is used to sign/encrypt cookies and other secrets.

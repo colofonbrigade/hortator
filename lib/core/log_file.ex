@@ -5,8 +5,8 @@ defmodule Core.LogFile do
 
   require Logger
 
-  @handler_id :symphony_disk_log
-  @default_log_relative_path "log/symphony.log"
+  @handler_id :hortator_disk_log
+  @default_log_relative_path "log/hortator.log"
   @default_max_bytes 10 * 1024 * 1024
   @default_max_files 5
 
