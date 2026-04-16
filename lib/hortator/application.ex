@@ -1,7 +1,10 @@
-defmodule Core.Application do
-  # See https://hexdocs.pm/elixir/Application.html
-  # for more information on OTP Applications
-  @moduledoc false
+defmodule Hortator.Application do
+  @moduledoc """
+  OTP application entrypoint. This is the composition root: it wires
+  together children from every boundary (`Core`, `Web`, `Agents`,
+  `Trackers`, and their peers) and is the only module allowed to reach
+  across all of them.
+  """
 
   use Boundary, top_level?: true, deps: [Core, Web]
   use Application

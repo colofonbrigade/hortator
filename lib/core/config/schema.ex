@@ -62,7 +62,7 @@ defmodule Core.Config.Schema do
 
     @primary_key false
     embedded_schema do
-      field(:root, :string, default: Path.join(System.tmp_dir!(), "symphony_workspaces"))
+      field(:root, :string, default: Path.join(System.tmp_dir!(), "hortator_workspaces"))
     end
 
     @spec changeset(%__MODULE__{}, map()) :: Ecto.Changeset.t()
@@ -196,7 +196,7 @@ defmodule Core.Config.Schema do
       field(:refresh_ms, :integer, default: 1_000)
       field(:render_interval_ms, :integer, default: 16)
       field(:telemetry_enabled, :boolean, default: true)
-      field(:telemetry_db_path, :string, default: Path.join(System.user_home!() || System.tmp_dir!(), ".symphony/telemetry.db"))
+      field(:telemetry_db_path, :string, default: Path.join(System.user_home!() || System.tmp_dir!(), ".hortator/telemetry.db"))
     end
 
     @spec changeset(%__MODULE__{}, map()) :: Ecto.Changeset.t()
@@ -316,7 +316,7 @@ defmodule Core.Config.Schema do
 
     workspace = %{
       settings.workspace
-      | root: resolve_path_value(settings.workspace.root, Path.join(System.tmp_dir!(), "symphony_workspaces"))
+      | root: resolve_path_value(settings.workspace.root, Path.join(System.tmp_dir!(), "hortator_workspaces"))
     }
 
     %{settings | tracker: tracker, workspace: workspace}

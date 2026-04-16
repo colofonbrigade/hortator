@@ -14,9 +14,18 @@ defmodule Mix.Tasks.Workspace.BeforeRemove do
       mix workspace.before_remove
       mix workspace.before_remove --branch feature/my-branch
       mix workspace.before_remove --repo owner/repo
-  """
 
-  @default_repo nil
+  The target repository is resolved in order of precedence:
+
+    1. `--repo owner/repo` CLI flag.
+    2. Slug parsed from the `REPO_CLONE_URL` environment variable (the same
+       variable used by workflow `hooks.after_create` to clone the workspace).
+       Supports `git@github.com:owner/repo[.git]` and
+       `https://github.com/owner/repo[.git]` forms.
+
+  If neither is set, the task no-ops — we never assume a default repo since
+  that would risk closing PRs in someone else's project.
+  """
 
   @impl Mix.Task
   def run(args) do
@@ -34,13 +43,32 @@ defmodule Mix.Tasks.Workspace.BeforeRemove do
         Mix.raise("Invalid option(s): #{inspect(invalid)}")
 
       true ->
-        repo = opts[:repo] || @default_repo
+        repo = opts[:repo] || repo_from_clone_url(System.get_env("REPO_CLONE_URL"))
         branch = opts[:branch] || current_branch()
 
         maybe_close_open_pull_requests(repo, branch)
     end
   end
 
+  @doc false
+  @spec repo_from_clone_url(String.t() | nil) :: String.t() | nil
+  def repo_from_clone_url(nil), do: nil
+
+  def repo_from_clone_url(url) when is_binary(url) do
+    patterns = [
+      ~r|git@github\.com:(?<owner>[^/]+)/(?<repo>[^/]+?)(?:\.git)?$|,
+      ~r|https?://github\.com/(?<owner>[^/]+)/(?<repo>[^/]+?)(?:\.git)?/?$|
+    ]
+
+    Enum.find_value(patterns, fn regex ->
+      case Regex.named_captures(regex, url) do
+        %{"owner" => owner, "repo" => repo} -> "#{owner}/#{repo}"
+        _ -> nil
+      end
+    end)
+  end
+
+  defp maybe_close_open_pull_requests(nil, _branch), do: :ok
   defp maybe_close_open_pull_requests(_repo, nil), do: :ok
 
   defp maybe_close_open_pull_requests(repo, branch) do

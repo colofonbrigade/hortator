@@ -7,6 +7,14 @@ config :hortator, Web.Endpoint,
   secret_key_base: "GSI6UjhpN0uQLk7TIJn68bQU3P6DQYBJqayiEo/loBDW+SWtm+O+RHH6UGqLFwXD",
   server: false
 
+# Silence the status dashboard renderer during tests.
+config :hortator, Core.StatusDashboard, render: false
+
+# Swap in the in-memory tracker adapter so tests don't hit Linear. The
+# orchestrator still calls Core.Tracker; Core.Tracker dispatches to the
+# configured adapter.
+config :hortator, Core.Tracker, adapter: Test.Tracker.Memory
+
 # Print only warnings and errors during test
 config :logger, level: :warning
 
