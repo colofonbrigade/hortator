@@ -23,11 +23,14 @@ defmodule Web.Router do
   scope "/api/v1", Web do
     pipe_through :api
 
+    # Specific routes and their method_not_allowed catchalls come first so
+    # that e.g. GET /api/v1/refresh returns 405 rather than being picked up by
+    # the /:issue_identifier route below.
     get "/state", ObservabilityApiController, :state
-    post "/refresh", ObservabilityApiController, :refresh
-    get "/:issue_identifier", ObservabilityApiController, :issue
     match :*, "/state", ObservabilityApiController, :method_not_allowed
+    post "/refresh", ObservabilityApiController, :refresh
     match :*, "/refresh", ObservabilityApiController, :method_not_allowed
+    get "/:issue_identifier", ObservabilityApiController, :issue
     match :*, "/:issue_identifier", ObservabilityApiController, :method_not_allowed
   end
 

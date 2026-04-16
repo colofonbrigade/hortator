@@ -487,6 +487,7 @@ defmodule Core.LiveE2ETest do
     worker_ports = reserve_tcp_ports(@docker_worker_count)
     worker_hosts = Enum.map(worker_ports, &"localhost:#{&1}")
     project_name = docker_project_name(run_id)
+
     base_cleanup = fn ->
       Process.delete(:ssh_config)
       docker_compose_down(project_name, docker_compose_env(worker_ports, key_path <> ".pub", claude_config_dir))

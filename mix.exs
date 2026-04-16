@@ -13,10 +13,12 @@ defmodule Core.MixProject do
       compilers: [:phoenix_live_view, :boundary] ++ Mix.compilers(),
       listeners: [Phoenix.CodeReloader],
       escript: escript(),
-      # Coverage threshold relaxed from phx.new's implicit 90%: the Symphony
-      # port skips Core.ExtensionsTest (was the main integration test for the
-      # Web layer) pending a phx-native rewrite. Tighten as more tests land.
-      test_coverage: [summary: [threshold: 60]],
+      # Coverage threshold relaxed from phx.new's implicit 90%. Tighten as
+      # more tests land; the dark corners today are `Web.CoreComponents`
+      # (phx-generated UI kit, not worth hand-testing), `Web.Layouts`
+      # (template-only), `Trackers.Linear.Client`, and the logs/retry paths
+      # of `Core.Orchestrator` and `Agents.Claude.Session`.
+      test_coverage: [summary: [threshold: 70]],
       # Mix.Task implementations reference Mix.shell/0 and Mix.raise/1, so the
       # PLT needs the :mix application loaded.
       dialyzer: [plt_add_apps: [:mix]]
