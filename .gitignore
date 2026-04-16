@@ -25,6 +25,13 @@ erl_crash.dump
 # Runtime log files (Core.LogFile rotating disk handler).
 /log/
 
+# Local environment file. Ship .env.example, never .env itself.
+.env
+.env.local
+
+# Built escript artifact. Rebuild via `mix escript.build`.
+/bin/hort
+
 # Ignore package tarball (built via "mix hex.build").
 hortator-*.tar
 

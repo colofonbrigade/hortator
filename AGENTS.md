@@ -11,7 +11,7 @@ Hortator is an Elixir agent orchestration service that polls Linear, creates per
 
 ## Codebase-Specific Conventions
 
-- Runtime config is loaded from `WORKFLOW.md` front matter via `Core.Workflow` and `Core.Config`.
+- Runtime config is loaded from a workflow Markdown file (defaults to `workflows/TEMPLATE.md`) via `Core.Workflow` and `Core.Config`.
 - Keep the implementation aligned with [`SPEC.md`](SPEC.md) where practical.
   - The implementation may be a superset of the spec.
   - The implementation must not conflict with the spec.
@@ -62,4 +62,4 @@ mix pr_body.check --file /path/to/pr_body.md
 If behavior/config changes, update docs in the same PR:
 
 - `README.md` for project concept, goals, and run instructions.
-- `WORKFLOW.md` for workflow/config contract changes.
+- `workflows/TEMPLATE.md` (and any peers under `workflows/`) for workflow/config contract changes.

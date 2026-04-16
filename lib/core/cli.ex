@@ -1,9 +1,11 @@
 defmodule Core.CLI do
   @moduledoc """
-  Escript entrypoint for running Symphony with an explicit WORKFLOW.md path.
+  Escript entrypoint for running Hortator with a workflow Markdown file.
+  Defaults to `workflows/TEMPLATE.md` relative to cwd; pass a path to use a
+  different workflow (e.g. `workflows/smoke-test.md` or one you've authored).
   """
 
-  alias Core.LogFile
+  alias Core.{LogFile, Workflow}
 
   @acknowledgement_switch :i_understand_that_this_will_be_running_without_the_usual_guardrails
   @switches [{@acknowledgement_switch, :boolean}, logs_root: :string, port: :integer]
@@ -36,7 +38,7 @@ defmodule Core.CLI do
         with :ok <- require_guardrails_acknowledgement(opts),
              :ok <- maybe_set_logs_root(opts, deps),
              :ok <- maybe_set_server_port(opts, deps) do
-          run(Path.expand("WORKFLOW.md"), deps)
+          run(Path.expand("workflows/TEMPLATE.md"), deps)
         end
 
       {opts, [workflow_path], []} ->
@@ -56,14 +58,20 @@ defmodule Core.CLI do
     expanded_path = Path.expand(workflow_path)
 
     if deps.file_regular?.(expanded_path) do
+      # Load :hortator first so put_env overrides survive into application start.
+      # Without this, Application.start reloads defaults from the .app spec and
+      # wipes any runtime env we set before ensure_all_started.
+      _ = Application.load(:hortator)
+
       :ok = deps.set_workflow_file_path.(expanded_path)
+      :ok = apply_workflow_endpoint_config(expanded_path)
 
       case deps.ensure_all_started.() do
         {:ok, _started_apps} ->
           :ok
 
         {:error, reason} ->
-          {:error, "Failed to start Symphony with workflow #{expanded_path}: #{inspect(reason)}"}
+          {:error, "Failed to start Hortator with workflow #{expanded_path}: #{inspect(reason)}"}
       end
     else
       {:error, "Workflow file not found: #{expanded_path}"}
@@ -72,14 +80,14 @@ defmodule Core.CLI do
 
   @spec usage_message() :: String.t()
   defp usage_message do
-    "Usage: symphony [--logs-root <path>] [--port <port>] [path-to-WORKFLOW.md]"
+    "Usage: hort [--logs-root <path>] [--port <port>] [path-to-workflow.md]"
   end
 
   @spec runtime_deps() :: deps()
   defp runtime_deps do
     %{
       file_regular?: &File.regular?/1,
-      set_workflow_file_path: &Core.Workflow.set_workflow_file_path/1,
+      set_workflow_file_path: &Workflow.set_workflow_file_path/1,
       set_logs_root: &set_logs_root/1,
       set_server_port_override: &set_server_port_override/1,
       ensure_all_started: fn -> Application.ensure_all_started(:hortator) end
@@ -113,9 +121,9 @@ defmodule Core.CLI do
   @spec acknowledgement_banner() :: String.t()
   defp acknowledgement_banner do
     lines = [
-      "This Symphony implementation is a low key engineering preview.",
+      "This Hortator implementation is a low-key engineering preview.",
       "Claude Code will run without any guardrails.",
-      "Core is not a supported product and is presented as-is.",
+      "Hortator is not a supported product and is presented as-is.",
       "To proceed, start with `--i-understand-that-this-will-be-running-without-the-usual-guardrails` CLI argument"
     ]
 
@@ -169,11 +177,54 @@ defmodule Core.CLI do
     :ok
   end
 
+  # Mirror the workflow-driven endpoint config that config/runtime.exs applies
+  # when running under `mix`. Escripts don't evaluate runtime.exs, so we do the
+  # same pure load + Application.put_env here before the endpoint starts. The
+  # --port CLI flag takes precedence over the workflow's server.port.
+  defp apply_workflow_endpoint_config(path) do
+    workflow_server =
+      case Workflow.load(path) do
+        {:ok, %{config: %{"server" => %{} = server}}} -> server
+        _ -> %{}
+      end
+
+    override_port = Application.get_env(:hortator, :server_port_override)
+
+    port =
+      case {override_port, Map.get(workflow_server, "port")} do
+        {p, _} when is_integer(p) and p >= 0 -> p
+        {_, p} when is_integer(p) and p >= 0 -> p
+        _ -> nil
+      end
+
+    if is_integer(port) do
+      host = Map.get(workflow_server, "host", "127.0.0.1")
+
+      ip =
+        case host |> String.to_charlist() |> :inet.parse_address() do
+          {:ok, ip} -> ip
+          {:error, _} -> {127, 0, 0, 1}
+        end
+
+      existing = Application.get_env(:hortator, Web.Endpoint, [])
+
+      merged =
+        existing
+        |> Keyword.put(:server, true)
+        |> Keyword.put(:http, ip: ip, port: port)
+        |> Keyword.put(:url, host: host)
+
+      Application.put_env(:hortator, Web.Endpoint, merged)
+    end
+
+    :ok
+  end
+
   @spec wait_for_shutdown() :: no_return()
   defp wait_for_shutdown do
     case Process.whereis(Core.Supervisor) do
       nil ->
-        IO.puts(:stderr, "Symphony supervisor is not running")
+        IO.puts(:stderr, "Hortator supervisor is not running")
         System.halt(1)
 
       pid ->

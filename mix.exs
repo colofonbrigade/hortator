@@ -11,7 +11,8 @@ defmodule Core.MixProject do
       aliases: aliases(),
       deps: deps(),
       compilers: [:phoenix_live_view, :boundary] ++ Mix.compilers(),
-      listeners: [Phoenix.CodeReloader]
+      listeners: [Phoenix.CodeReloader],
+      escript: escript()
     ]
   end
 
@@ -34,6 +35,15 @@ defmodule Core.MixProject do
   # Specifies which paths to compile per environment.
   defp elixirc_paths(:test), do: ["lib", "test/support"]
   defp elixirc_paths(_), do: ["lib"]
+
+  defp escript do
+    [
+      app: nil,
+      main_module: Core.CLI,
+      name: "hort",
+      path: "bin/hort"
+    ]
+  end
 
   # Specifies your project dependencies.
   #

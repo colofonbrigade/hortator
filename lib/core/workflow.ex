@@ -1,11 +1,13 @@
 defmodule Core.Workflow do
   @moduledoc """
-  Loads workflow configuration and prompt from WORKFLOW.md.
+  Loads workflow configuration and prompt from a workflow Markdown file.
+  `workflows/TEMPLATE.md` is the default; any number of peer workflow files
+  can live under `workflows/`.
   """
 
   alias Core.WorkflowStore
 
-  @workflow_file_name "WORKFLOW.md"
+  @workflow_file_name "workflows/TEMPLATE.md"
 
   @spec workflow_file_path() :: Path.t()
   def workflow_file_path do

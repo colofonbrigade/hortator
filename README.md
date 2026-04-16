@@ -34,11 +34,13 @@ Hortator stops the active agent for that issue and cleans up matching workspaces
    [Harness engineering](https://openai.com/index/harness-engineering/).
 2. Get a new personal token in Linear via Settings → Security & access → Personal API keys, and
    set it as the `LINEAR_API_KEY` environment variable.
-3. Copy this repo's `WORKFLOW.md` to your project.
+3. Copy `workflows/TEMPLATE.md` to a new file (e.g. `workflows/my-project.md` or back into
+   your own repo) — the `workflows/` directory holds one file per workflow, and additional
+   peers like `workflows/smoke-test.md` can coexist.
 4. Optionally copy the `commit`, `push`, `pull`, `land`, and `linear` skills to your repo.
    - The `linear` skill expects Hortator's `linear_graphql` app-server tool for raw Linear GraphQL
      operations such as comment editing or upload flows.
-5. Customize the copied `WORKFLOW.md` file for your project.
+5. Customize the copied workflow file for your project.
    - To get your project's slug, right-click the project and copy its URL. The slug is part of the
      URL.
    - When creating a workflow based on this repo, note that it depends on non-standard Linear
@@ -55,21 +57,45 @@ mise install
 mise exec -- elixir --version
 ```
 
+## Environment
+
+Hortator reads configuration from environment variables (Linear credentials,
+workspace path, repo clone URL, etc.). Start from the shipped template:
+
+```bash
+cp .env.example .env
+$EDITOR .env     # fill in LINEAR_API_KEY, LINEAR_PROJECT_SLUG, WORKSPACE_ROOT, ...
+```
+
+Any mechanism that loads `.env` into your shell works — the escript and mix
+tasks read directly from the process environment:
+
+- **direnv** (recommended): `echo 'dotenv_if_exists .env' > .envrc && direnv allow`
+- **Manual**: `set -a; source .env; set +a`
+- **1Password CLI / secret manager**: export the values before invoking Hortator
+
+`.env` is gitignored. `.env.example` documents every variable Hortator or its
+workflow templates consume; anything uncommented is required for a full
+production run, anything commented is optional or scenario-specific (live
+tests, smoke tests, SSH workers).
+
 ## Run
 
 ```bash
 mise trust
 mise install
 mise exec -- mix setup
-mise exec -- mix hortator.run ./WORKFLOW.md
+mise exec -- mix escript.build
+./bin/hort --i-understand-that-this-will-be-running-without-the-usual-guardrails workflows/TEMPLATE.md
 ```
 
 ## Configuration
 
-Pass a workflow file path to `mix hortator.run` when starting the service:
+Pass a workflow file path to `bin/hort` when starting the service. Defaults to
+`workflows/TEMPLATE.md` relative to cwd when omitted:
 
 ```bash
-mix hortator.run /path/to/custom/WORKFLOW.md
+./bin/hort --i-understand-that-this-will-be-running-without-the-usual-guardrails /path/to/custom-workflow.md
 ```
 
 Optional flags:
@@ -77,7 +103,7 @@ Optional flags:
 - `--logs-root` tells Hortator to write logs under a different directory (default: `./log`)
 - `--port` overrides the Phoenix observability server port. If omitted, Hortator uses `server.port` from the workflow YAML (TEMPLATE.md ships `4100`); when neither is set, the observability server is disabled. Open `http://<host>:<port>/` for the live dashboard.
 
-The `WORKFLOW.md` file uses YAML front matter for configuration, plus a Markdown body used as the
+Workflow files use YAML front matter for configuration, plus a Markdown body used as the
 Codex session prompt.
 
 Minimal example:
@@ -142,7 +168,7 @@ codex:
   command: "$CODEX_BIN app-server --model gpt-5.3-codex"
 ```
 
-- If `WORKFLOW.md` is missing or has invalid YAML at startup, Hortator does not boot.
+- If the workflow file is missing or has invalid YAML at startup, Hortator does not boot.
 - If a later reload fails, Hortator keeps running with the last known good workflow and logs the
   reload error until the file is fixed.
 - `server.port` or CLI `--port` enables the optional Phoenix LiveView dashboard and JSON API at
@@ -161,7 +187,7 @@ The observability UI runs on a minimal Phoenix stack:
 
 - `lib/`: application code and Mix tasks
 - `test/`: ExUnit coverage for runtime behavior
-- `WORKFLOW.md`: in-repo workflow contract used by local runs
+- `workflows/`: workflow Markdown files (`TEMPLATE.md` as the default, `smoke-test.md` for CI)
 - `.claude/`: repository-local Claude Code skills and setup helpers
 
 ## Testing
@@ -212,7 +238,7 @@ and run the same orchestration flow against those worker addresses. This keeps t
 representative without depending on long-lived external machines. The keychain extraction means
 the Docker variant is macOS-only for now; Linux hosts will need an alternative auth path.
 
-The live test creates a temporary Linear project and issue, writes a temporary `WORKFLOW.md`, runs
+The live test creates a temporary Linear project and issue, writes a temporary workflow file, runs
 a real agent turn, verifies the workspace side effect, requires the agent to post a comment and
 move the issue to a completed state, then marks the project completed so the run remains visible
 in Linear.
