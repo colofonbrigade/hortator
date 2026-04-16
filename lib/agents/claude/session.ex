@@ -2,7 +2,7 @@ defmodule Agents.Claude.Session do
   @moduledoc """
   Long-running client for the Claude Code stream-json subprocess.
 
-  Symphony spawns one `claude` process per logical session and feeds it
+  Hortator spawns one `claude` process per logical session and feeds it
   line-delimited JSON user messages on stdin, reading line-delimited JSON
   events from stdout until each `result` event arrives.
 

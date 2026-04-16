@@ -1,22 +1,22 @@
 ---
-# Symphony smoke-test workflow.
+# Hortator smoke-test workflow.
 #
 # This file uses ${VAR} placeholders so that the same file can be reused
 # across forks and Linear projects without committing per-environment
 # values. YAML field placeholders (project_slug, workspace.root) are
-# expanded by Symphony's workflow loader at load time. Hook command
+# expanded by Hortator's workflow loader at load time. Hook command
 # placeholders (SMOKE_REPO_URL, SMOKE_REPO_BRANCH) are expanded by
 # `sh -lc` at hook execution time.
 #
-# Required env vars (set in your shell before starting Symphony):
+# Required env vars (set in your shell before starting Hortator):
 #   LINEAR_PROJECT_SLUG  Linear project slug, e.g. "testing-206961824733"
-#   SMOKE_WORKSPACE_ROOT Per-issue workspace root, e.g. "~/code/symphony-smoke-workspaces"
+#   SMOKE_WORKSPACE_ROOT Per-issue workspace root, e.g. "~/code/hortator-smoke-workspaces"
 #   SMOKE_REPO_URL       Git URL to clone into the per-issue workspace, e.g.
-#                        "https://github.com/openai/symphony" (use your fork
+#                        "https://github.com/openai/hortator" (use your fork
 #                        if you want commits/PRs to land there instead)
 #   SMOKE_REPO_BRANCH    Branch to clone, e.g. "main"
 #
-# Plus the standard ones Symphony already resolves:
+# Plus the standard ones Hortator already resolves:
 #   LINEAR_API_KEY       Linear personal API key (resolved via $LINEAR_API_KEY in tracker.api_key)
 
 tracker:
@@ -172,7 +172,7 @@ The agent should be able to talk to Linear via the official Linear MCP server co
 4.  Start work by writing/updating a hierarchical plan in the workpad comment.
 5.  Ensure the workpad includes a compact environment stamp at the top as a code fence line:
     - Format: `<host>:<abs-workdir>@<short-sha>`
-    - Example: `devbox-01:/home/dev-user/code/symphony-workspaces/MT-32@7bdde33bc`
+    - Example: `devbox-01:/home/dev-user/code/hortator-workspaces/MT-32@7bdde33bc`
     - Do not include metadata already inferable from Linear issue fields (`issue ID`, `status`, `branch`, `PR link`).
 6.  Add explicit acceptance criteria and TODOs in checklist form in the same comment.
     - If changes are user-facing, include a UI walkthrough acceptance criterion that describes the end-to-end user path to validate.
@@ -238,7 +238,7 @@ Use this only when completion is blocked by missing required tools or missing au
 6.  Re-check all acceptance criteria and close any gaps.
 7.  Before every `git push` attempt, run the required validation for your scope and confirm it passes; if it fails, address issues and rerun until green, then commit and push changes.
 8.  Attach PR URL to the issue (prefer attachment; use the workpad comment only if attachment is unavailable).
-    - Ensure the GitHub PR has label `symphony` (add it if missing).
+    - Ensure the GitHub PR has label `hortator` (add it if missing).
 9.  Merge latest `origin/main` into branch, resolve conflicts, and rerun checks.
 10. Update the workpad comment with final checklist status and validation notes.
     - Mark completed plan/acceptance/validation checklist items as checked.
@@ -288,7 +288,7 @@ Use this only when completion is blocked by missing required tools or missing au
 - Validation/tests are green for the latest commit.
 - PR feedback sweep is complete and no actionable comments remain.
 - PR checks are green, branch is pushed, and PR is linked on the issue.
-- Required PR metadata is present (`symphony` label).
+- Required PR metadata is present (`hortator` label).
 - If app-touching, runtime validation/media requirements from `App runtime validation (required)` are complete.
 
 ## Guardrails

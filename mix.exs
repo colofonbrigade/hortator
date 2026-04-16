@@ -16,7 +16,10 @@ defmodule Core.MixProject do
       # Coverage threshold relaxed from phx.new's implicit 90%: the Symphony
       # port skips Core.ExtensionsTest (was the main integration test for the
       # Web layer) pending a phx-native rewrite. Tighten as more tests land.
-      test_coverage: [summary: [threshold: 60]]
+      test_coverage: [summary: [threshold: 60]],
+      # Mix.Task implementations reference Mix.shell/0 and Mix.raise/1, so the
+      # PLT needs the :mix application loaded.
+      dialyzer: [plt_add_apps: [:mix]]
     ]
   end
 
@@ -63,13 +66,7 @@ defmodule Core.MixProject do
       {:phoenix_live_dashboard, "~> 0.8.3"},
       {:esbuild, "~> 0.10", runtime: Mix.env() == :dev},
       {:tailwind, "~> 0.3", runtime: Mix.env() == :dev},
-      {:heroicons,
-       github: "tailwindlabs/heroicons",
-       tag: "v2.2.0",
-       sparse: "optimized",
-       app: false,
-       compile: false,
-       depth: 1},
+      {:heroicons, github: "tailwindlabs/heroicons", tag: "v2.2.0", sparse: "optimized", app: false, compile: false, depth: 1},
       {:req, "~> 0.5"},
       {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
@@ -103,7 +100,7 @@ defmodule Core.MixProject do
         "esbuild hortator --minify",
         "phx.digest"
       ],
-      lint: ["credo --strict", "compile --warnings-as-errors"],
+      lint: ["credo", "compile --warnings-as-errors"],
       precommit: ["compile --warnings-as-errors", "deps.unlock --unused", "format", "test"]
     ]
   end

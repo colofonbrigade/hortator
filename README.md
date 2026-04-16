@@ -1,256 +1,53 @@
 # Hortator
 
-Hortator turns project work into isolated, autonomous implementation runs, allowing teams to manage
-work instead of supervising coding agents.
+Hortator is an Elixir orchestrator that drives Claude Code agents against a Linear workspace. It polls a Linear project, spins up isolated per-issue workspaces, hands each to a Claude Code session, and keeps the session running until the work is done or the issue moves to a terminal state.
 
 > [!WARNING]
-> Hortator is a low-key engineering preview for testing in trusted environments, based on
-> [`SPEC.md`](SPEC.md) from the [openai/symphony](https://github.com/openai/symphony) project.
+> Hortator is an experimental engineering preview for testing in trusted
+> environments. It's based on [`SPEC.md`](SPEC.md), forked from the
+> [openai/symphony](https://github.com/openai/symphony) project (see
+> [`NOTICE`](NOTICE) for attribution and the upstream commit).
 
-## Requirements
+## Architecture
 
-Hortator works best in codebases that have adopted
-[harness engineering](https://openai.com/index/harness-engineering/). Hortator is the next step --
-moving from managing coding agents to managing work that needs to get done.
+Hortator is a Phoenix application whose lib/ is carved into one boundary per top-level namespace, enforced by the [`boundary`](https://hex.pm/packages/boundary) compiler (see [`docs/elixir_rules.md`](docs/elixir_rules.md) and [`docs/local_elixir_rules.md`](docs/local_elixir_rules.md)):
 
-## How it works
-
-1. Polls Linear for candidate work
-2. Creates a workspace per issue
-3. Launches Codex in [App Server mode](https://developers.openai.com/codex/app-server/) inside the
-   workspace
-4. Sends a workflow prompt to Codex
-5. Keeps Codex working on the issue until the work is done
-
-During app-server sessions, Hortator also serves a client-side `linear_graphql` tool so that repo
-skills can make raw Linear GraphQL calls.
-
-If a claimed issue moves to a terminal state (`Done`, `Closed`, `Cancelled`, or `Duplicate`),
-Hortator stops the active agent for that issue and cleans up matching workspaces.
-
-## How to use it
-
-1. Make sure your codebase is set up to work well with agents: see
-   [Harness engineering](https://openai.com/index/harness-engineering/).
-2. Get a new personal token in Linear via Settings → Security & access → Personal API keys, and
-   set it as the `LINEAR_API_KEY` environment variable.
-3. Copy `workflows/TEMPLATE.md` to a new file (e.g. `workflows/my-project.md` or back into
-   your own repo) — the `workflows/` directory holds one file per workflow, and additional
-   peers like `workflows/smoke-test.md` can coexist.
-4. Optionally copy the `commit`, `push`, `pull`, `land`, and `linear` skills to your repo.
-   - The `linear` skill expects Hortator's `linear_graphql` app-server tool for raw Linear GraphQL
-     operations such as comment editing or upload flows.
-5. Customize the copied workflow file for your project.
-   - To get your project's slug, right-click the project and copy its URL. The slug is part of the
-     URL.
-   - When creating a workflow based on this repo, note that it depends on non-standard Linear
-     issue statuses: "Rework", "Human Review", and "Merging". You can customize them in
-     Team Settings → Workflow in Linear.
-6. Follow the instructions below to install the required runtime dependencies and start the service.
-
-## Prerequisites
-
-We recommend using [mise](https://mise.jdx.dev/) to manage Elixir/Erlang versions.
-
-```bash
-mise install
-mise exec -- elixir --version
+```
+                        Hortator.Application
+                       (composition root)
+                      ────────────────────
+                      ↓                 ↓
+                    Core              Web
+        ┌──────────┬─┴────┬──────┐     │ (Phoenix endpoint,
+        ↓          ↓      ↓      ↓     │  observability API,
+     Agents    Trackers  CLI   Utils   │  LiveView dashboard)
+        │          │      │      │     │
+        ├──────────┴──────┴──────┴─────┘
+        ↓                  ↓
+   Permissions ←───────→ Transport
+       (leaf)              (SSH today)
+                  ↓
+                Schema (leaf — shared structs)
 ```
 
-## Environment
+Peer backends live under single-purpose top-level boundaries: `Agents.Claude` today (Claude Code subprocess / SSH session), `Trackers.Linear` today (GraphQL client + adapter). Adding another tracker or agent backend is a new sub-namespace under the same parent boundary, without widening `Core`'s deps.
 
-Hortator reads configuration from environment variables (Linear credentials,
-workspace path, repo clone URL, etc.). Start from the shipped template:
-
-```bash
-cp .env.example .env
-$EDITOR .env     # fill in LINEAR_API_KEY, LINEAR_PROJECT_SLUG, WORKSPACE_ROOT, ...
-```
-
-Any mechanism that loads `.env` into your shell works — the escript and mix
-tasks read directly from the process environment:
-
-- **direnv** (recommended): `echo 'dotenv_if_exists .env' > .envrc && direnv allow`
-- **Manual**: `set -a; source .env; set +a`
-- **1Password CLI / secret manager**: export the values before invoking Hortator
-
-`.env` is gitignored. `.env.example` documents every variable Hortator or its
-workflow templates consume; anything uncommented is required for a full
-production run, anything commented is optional or scenario-specific (live
-tests, smoke tests, SSH workers).
-
-## Run
+## Quickstart
 
 ```bash
-mise trust
-mise install
-mise exec -- mix setup
-mise exec -- mix escript.build
+cp .env.example .env          # fill in LINEAR_API_KEY, LINEAR_PROJECT_SLUG, WORKSPACE_ROOT, REPO_CLONE_URL
+mise install                  # Elixir 1.19 / OTP 28
+mix setup                     # deps + asset pipeline
+mix escript.build             # produces bin/hort
 ./bin/hort --i-understand-that-this-will-be-running-without-the-usual-guardrails workflows/TEMPLATE.md
 ```
 
-## Configuration
+`bin/hort` is the single runnable artifact. It reads `workflows/TEMPLATE.md` by default (pass a different path to use another workflow — `workflows/smoke-test.md` ships as an example peer). The workflow YAML front matter expands `${ENV_VAR}` placeholders at load time. See [`AGENTS.md`](AGENTS.md) for conventions and [`docs/`](docs/) for the full ruleset.
 
-Pass a workflow file path to `bin/hort` when starting the service. Defaults to
-`workflows/TEMPLATE.md` relative to cwd when omitted:
+## Credit
 
-```bash
-./bin/hort --i-understand-that-this-will-be-running-without-the-usual-guardrails /path/to/custom-workflow.md
-```
-
-Optional flags:
-
-- `--logs-root` tells Hortator to write logs under a different directory (default: `./log`)
-- `--port` overrides the Phoenix observability server port. If omitted, Hortator uses `server.port` from the workflow YAML (TEMPLATE.md ships `4100`); when neither is set, the observability server is disabled. Open `http://<host>:<port>/` for the live dashboard.
-
-Workflow files use YAML front matter for configuration, plus a Markdown body used as the
-Codex session prompt.
-
-Minimal example:
-
-```md
----
-tracker:
-  kind: linear
-  project_slug: "..."
-workspace:
-  root: ~/code/workspaces
-hooks:
-  after_create: |
-    git clone git@github.com:your-org/your-repo.git .
-agent:
-  max_concurrent_agents: 10
-  max_turns: 20
-codex:
-  command: codex app-server
----
-
-You are working on a Linear issue {{ issue.identifier }}.
-
-Title: {{ issue.title }} Body: {{ issue.description }}
-```
-
-Notes:
-
-- If a value is missing, defaults are used.
-- Safer Codex defaults are used when policy fields are omitted:
-  - `codex.approval_policy` defaults to `{"reject":{"sandbox_approval":true,"rules":true,"mcp_elicitations":true}}`
-  - `codex.thread_sandbox` defaults to `workspace-write`
-  - `codex.turn_sandbox_policy` defaults to a `workspaceWrite` policy rooted at the current issue workspace
-- Supported `codex.approval_policy` values depend on the targeted Codex app-server version. In the current local Codex schema, string values include `untrusted`, `on-failure`, `on-request`, and `never`, and object-form `reject` is also supported.
-- Supported `codex.thread_sandbox` values: `read-only`, `workspace-write`, `danger-full-access`.
-- When `codex.turn_sandbox_policy` is set explicitly, Hortator passes the map through to Codex
-  unchanged. Compatibility then depends on the targeted Codex app-server version rather than local
-  Hortator validation.
-- `agent.max_turns` caps how many back-to-back Codex turns Hortator will run in a single agent
-  invocation when a turn completes normally but the issue is still in an active state. Default: `20`.
-- If the Markdown body is blank, Hortator uses a default prompt template that includes the issue
-  identifier, title, and body.
-- Use `hooks.after_create` to bootstrap a fresh workspace. For a Git-backed repo, you can run
-  `git clone ... .` there, along with any other setup commands you need.
-- If a hook needs `mise exec` inside a freshly cloned workspace, trust the repo config and fetch
-  the project dependencies in `hooks.after_create` before invoking `mise` later from other hooks.
-- `tracker.api_key` reads from `LINEAR_API_KEY` when unset or when value is `$LINEAR_API_KEY`.
-- For path values, `~` is expanded to the home directory.
-- For env-backed path values, use `$VAR`. `workspace.root` resolves `$VAR` before path handling,
-  while `codex.command` stays a shell command string and any `$VAR` expansion there happens in the
-  launched shell.
-
-```yaml
-tracker:
-  api_key: $LINEAR_API_KEY
-workspace:
-  root: $HORTATOR_WORKSPACE_ROOT
-hooks:
-  after_create: |
-    git clone --depth 1 "$SOURCE_REPO_URL" .
-codex:
-  command: "$CODEX_BIN app-server --model gpt-5.3-codex"
-```
-
-- If the workflow file is missing or has invalid YAML at startup, Hortator does not boot.
-- If a later reload fails, Hortator keeps running with the last known good workflow and logs the
-  reload error until the file is fixed.
-- `server.port` or CLI `--port` enables the optional Phoenix LiveView dashboard and JSON API at
-  `/`, `/api/v1/state`, `/api/v1/<issue_identifier>`, and `/api/v1/refresh`.
-
-## Web dashboard
-
-The observability UI runs on a minimal Phoenix stack:
-
-- LiveView for the dashboard at `/`
-- JSON API for operational debugging under `/api/v1/*`
-- Bandit as the HTTP server
-- Phoenix dependency static assets for the LiveView client bootstrap
-
-## Project Layout
-
-- `lib/`: application code and Mix tasks
-- `test/`: ExUnit coverage for runtime behavior
-- `workflows/`: workflow Markdown files (`TEMPLATE.md` as the default, `smoke-test.md` for CI)
-- `.claude/`: repository-local Claude Code skills and setup helpers
-
-## Testing
-
-```bash
-make all
-```
-
-Run the real external end-to-end test only when you want Hortator to create disposable Linear
-resources and launch a real Claude Code session:
-
-```bash
-export LINEAR_API_KEY=...
-make e2e
-```
-
-Required environment variables:
-
-- `LINEAR_API_KEY` — personal Linear API key with permission to create projects and issues in
-  the target team.
-- `HORTATOR_LIVE_LINEAR_TEAM_KEY` — Linear team key to run the live test against (the short
-  prefix on your issue identifiers, e.g. `MT` for `MT-123`). No default — the live test will
-  flunk with an explanatory message if this is unset.
-
-Optional environment variables:
-
-- `HORTATOR_LIVE_SSH_WORKER_HOSTS` — comma-separated SSH hosts to use as remote workers. When
-  set, the SSH scenario targets those hosts; when unset, the SSH scenario uses `docker compose`
-  to start two disposable SSH workers on `localhost:<port>`.
-
-Set the required vars in your shell profile or a local direnv `.envrc` rather than committing
-them:
-
-```bash
-export LINEAR_API_KEY=lin_api_...
-export HORTATOR_LIVE_LINEAR_TEAM_KEY=MT
-```
-
-`make e2e` runs two live scenarios:
-- one with a local worker (runs `claude` on the host machine)
-- one with SSH workers (either remote hosts or ephemeral Docker containers)
-
-In the Docker variant, the live test generates a temporary SSH keypair, extracts the Claude Code
-OAuth credential from the macOS keychain (`security find-generic-password -s
-"Claude Code-credentials"`), writes it to a temp `.credentials.json` that is mounted into each
-worker at `/home/worker/.claude`, then verifies Hortator can talk to the workers over real SSH
-and run the same orchestration flow against those worker addresses. This keeps the transport
-representative without depending on long-lived external machines. The keychain extraction means
-the Docker variant is macOS-only for now; Linux hosts will need an alternative auth path.
-
-The live test creates a temporary Linear project and issue, writes a temporary workflow file, runs
-a real agent turn, verifies the workspace side effect, requires the agent to post a comment and
-move the issue to a completed state, then marks the project completed so the run remains visible
-in Linear.
-
-## FAQ
-
-### Why Elixir?
-
-Elixir is built on Erlang/BEAM/OTP, which is great for supervising long-running processes. It has an
-active ecosystem of tools and libraries. It also supports hot code reloading without stopping
-actively running subagents, which is very useful during development.
+Hortator is a fork of [Symphony](https://github.com/openai/symphony), the Elixir reference implementation that OpenAI released alongside the harness-engineering spec. This fork ports the domain logic onto a stock `phx.new` substrate, swaps the SQLite-backed telemetry for a lighter surface area, and restructures the boundary DAG so additional agent backends and tracker integrations can land as peer namespaces. See the [`NOTICE`](NOTICE) file for the full attribution line and upstream commit hash.
 
 ## License
 
-This project is licensed under the [Apache License 2.0](LICENSE).
+Apache License 2.0 — see [`LICENSE`](LICENSE).

@@ -182,42 +182,53 @@ defmodule Core.CLI do
   # same pure load + Application.put_env here before the endpoint starts. The
   # --port CLI flag takes precedence over the workflow's server.port.
   defp apply_workflow_endpoint_config(path) do
-    workflow_server =
-      case Workflow.load(path) do
-        {:ok, %{config: %{"server" => %{} = server}}} -> server
-        _ -> %{}
-      end
-
-    override_port = Application.get_env(:hortator, :server_port_override)
-
-    port =
-      case {override_port, Map.get(workflow_server, "port")} do
-        {p, _} when is_integer(p) and p >= 0 -> p
-        {_, p} when is_integer(p) and p >= 0 -> p
-        _ -> nil
-      end
+    server = load_workflow_server(path)
+    port = effective_port(server)
 
     if is_integer(port) do
-      host = Map.get(workflow_server, "host", "127.0.0.1")
-
-      ip =
-        case host |> String.to_charlist() |> :inet.parse_address() do
-          {:ok, ip} -> ip
-          {:error, _} -> {127, 0, 0, 1}
-        end
-
-      existing = Application.get_env(:hortator, Web.Endpoint, [])
-
-      merged =
-        existing
-        |> Keyword.put(:server, true)
-        |> Keyword.put(:http, ip: ip, port: port)
-        |> Keyword.put(:url, host: host)
-
-      Application.put_env(:hortator, Web.Endpoint, merged)
+      configure_endpoint(server, port)
     end
 
     :ok
+  end
+
+  defp load_workflow_server(path) do
+    case Workflow.load(path) do
+      {:ok, %{config: %{"server" => %{} = server}}} -> server
+      _ -> %{}
+    end
+  end
+
+  defp effective_port(server) do
+    override = Application.get_env(:hortator, :server_port_override)
+    workflow = Map.get(server, "port")
+
+    cond do
+      is_integer(override) and override >= 0 -> override
+      is_integer(workflow) and workflow >= 0 -> workflow
+      true -> nil
+    end
+  end
+
+  defp configure_endpoint(server, port) do
+    host = Map.get(server, "host", "127.0.0.1")
+    ip = parse_ip(host)
+
+    merged =
+      :hortator
+      |> Application.get_env(Web.Endpoint, [])
+      |> Keyword.put(:server, true)
+      |> Keyword.put(:http, ip: ip, port: port)
+      |> Keyword.put(:url, host: host)
+
+    Application.put_env(:hortator, Web.Endpoint, merged)
+  end
+
+  defp parse_ip(host) do
+    case host |> String.to_charlist() |> :inet.parse_address() do
+      {:ok, ip} -> ip
+      {:error, _} -> {127, 0, 0, 1}
+    end
   end
 
   @spec wait_for_shutdown() :: no_return()

@@ -6,7 +6,7 @@ this file wins locally; consider whether the divergence should be upstreamed.
 
 ## Boundaries in this repo
 
-- `Core` — Orchestrator, agent runner, workspace management, telemetry, workflow loader, status
+- `Core` — Orchestrator, agent runner, workspace management, workflow loader, status
   dashboard *coordinator* (the GenServer; rendering lives in `CLI`). The domain core.
 - `Web` — Phoenix endpoint, LiveView dashboard, JSON observability API. Depends on `Core` +
   `Schema`.

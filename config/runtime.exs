@@ -9,8 +9,7 @@ if System.get_env("PHX_SERVER") do
   config :hortator, Web.Endpoint, server: true
 end
 
-config :hortator, Web.Endpoint,
-  http: [port: String.to_integer(System.get_env("PORT", "4000"))]
+config :hortator, Web.Endpoint, http: [port: String.to_integer(System.get_env("PORT", "4000"))]
 
 # Optional SSH config file path. `Transport.SSH` reads it from Application env.
 config :hortator, :ssh_config, System.get_env("HORTATOR_SSH_CONFIG")

@@ -66,8 +66,7 @@ defmodule Core.Orchestrator.TokenAccounting do
         agent_last_reported_output_tokens: max(last_reported_output, token_delta.output_reported),
         agent_last_reported_total_tokens: max(last_reported_total, token_delta.total_reported),
         turn_count: turn_count_for_update(turn_count, running_entry.session_id, update),
-        rate_limit_info:
-          extract_rate_limit_info(update) || Map.get(running_entry, :rate_limit_info)
+        rate_limit_info: extract_rate_limit_info(update) || Map.get(running_entry, :rate_limit_info)
       }),
       token_delta,
       cost_delta

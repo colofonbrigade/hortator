@@ -58,12 +58,10 @@ defmodule Web.DashboardLive do
 
           <div class="status-stack">
             <span class="status-badge status-badge-live">
-              <span class="status-badge-dot"></span>
-              Live
+              <span class="status-badge-dot"></span> Live
             </span>
             <span class="status-badge status-badge-offline">
-              <span class="status-badge-dot"></span>
-              Offline
+              <span class="status-badge-dot"></span> Offline
             </span>
           </div>
         </div>
@@ -75,34 +73,34 @@ defmodule Web.DashboardLive do
             Snapshot unavailable
           </h2>
           <p class="error-copy">
-            <strong><%= @payload.error.code %>:</strong> <%= @payload.error.message %>
+            <strong>{@payload.error.code}:</strong> {@payload.error.message}
           </p>
         </section>
       <% else %>
         <section class="metric-grid">
           <article class="metric-card">
             <p class="metric-label">Running</p>
-            <p class="metric-value numeric"><%= @payload.counts.running %></p>
+            <p class="metric-value numeric">{@payload.counts.running}</p>
             <p class="metric-detail">Active issue sessions in the current runtime.</p>
           </article>
 
           <article class="metric-card">
             <p class="metric-label">Retrying</p>
-            <p class="metric-value numeric"><%= @payload.counts.retrying %></p>
+            <p class="metric-value numeric">{@payload.counts.retrying}</p>
             <p class="metric-detail">Issues waiting for the next retry window.</p>
           </article>
 
           <article class="metric-card">
             <p class="metric-label">Total tokens</p>
-            <p class="metric-value numeric"><%= format_int(@payload.agent_totals.total_tokens) %></p>
+            <p class="metric-value numeric">{format_int(@payload.agent_totals.total_tokens)}</p>
             <p class="metric-detail numeric">
-              In <%= format_int(@payload.agent_totals.input_tokens) %> / Out <%= format_int(@payload.agent_totals.output_tokens) %>
+              In {format_int(@payload.agent_totals.input_tokens)} / Out {format_int(@payload.agent_totals.output_tokens)}
             </p>
           </article>
 
           <article class="metric-card">
             <p class="metric-label">Runtime</p>
-            <p class="metric-value numeric"><%= format_runtime_seconds(total_runtime_seconds(@payload, @now)) %></p>
+            <p class="metric-value numeric">{format_runtime_seconds(total_runtime_seconds(@payload, @now))}</p>
             <p class="metric-detail">Total agent runtime across completed and active sessions.</p>
           </article>
         </section>
@@ -116,7 +114,7 @@ defmodule Web.DashboardLive do
           </div>
 
           <%= if rate_limit_summary = rate_limit_summary_line(@payload.running) do %>
-            <p class="rate-limit-alert"><%= rate_limit_summary %></p>
+            <p class="rate-limit-alert">{rate_limit_summary}</p>
           <% end %>
 
           <%= if @payload.running == [] do %>
@@ -146,17 +144,17 @@ defmodule Web.DashboardLive do
                   <tr :for={entry <- @payload.running}>
                     <td>
                       <div class="issue-stack">
-                        <span class="issue-id"><%= entry.issue_identifier %></span>
+                        <span class="issue-id">{entry.issue_identifier}</span>
                         <a class="issue-link" href={"/api/v1/#{entry.issue_identifier}"}>JSON details</a>
                       </div>
                     </td>
                     <td>
                       <span class={state_badge_class(entry.state)}>
-                        <%= entry.state %>
+                        {entry.state}
                       </span>
                       <%= if rate_limit_badge_label(entry.rate_limit_info) do %>
                         <span class="rate-limit-badge" title={rate_limit_badge_title(entry.rate_limit_info)}>
-                          <%= rate_limit_badge_label(entry.rate_limit_info) %>
+                          {rate_limit_badge_label(entry.rate_limit_info)}
                         </span>
                       <% end %>
                     </td>
@@ -177,25 +175,27 @@ defmodule Web.DashboardLive do
                         <% end %>
                       </div>
                     </td>
-                    <td class="numeric"><%= format_runtime_and_turns(entry.started_at, entry.turn_count, @now) %></td>
+                    <td class="numeric">{format_runtime_and_turns(entry.started_at, entry.turn_count, @now)}</td>
                     <td>
                       <div class="detail-stack">
                         <span
                           class="event-text"
                           title={entry.last_message || to_string(entry.last_event || "n/a")}
-                        ><%= entry.last_message || to_string(entry.last_event || "n/a") %></span>
+                        >
+                          {entry.last_message || to_string(entry.last_event || "n/a")}
+                        </span>
                         <span class="muted event-meta">
-                          <%= entry.last_event || "n/a" %>
+                          {entry.last_event || "n/a"}
                           <%= if entry.last_event_at do %>
-                            · <span class="mono numeric"><%= entry.last_event_at %></span>
+                            · <span class="mono numeric">{entry.last_event_at}</span>
                           <% end %>
                         </span>
                       </div>
                     </td>
                     <td>
                       <div class="token-stack numeric">
-                        <span>Total: <%= format_int(entry.tokens.total_tokens) %></span>
-                        <span class="muted">In <%= format_int(entry.tokens.input_tokens) %> / Out <%= format_int(entry.tokens.output_tokens) %></span>
+                        <span>Total: {format_int(entry.tokens.total_tokens)}</span>
+                        <span class="muted">In {format_int(entry.tokens.input_tokens)} / Out {format_int(entry.tokens.output_tokens)}</span>
                       </div>
                     </td>
                   </tr>
@@ -230,13 +230,13 @@ defmodule Web.DashboardLive do
                   <tr :for={entry <- @payload.retrying}>
                     <td>
                       <div class="issue-stack">
-                        <span class="issue-id"><%= entry.issue_identifier %></span>
+                        <span class="issue-id">{entry.issue_identifier}</span>
                         <a class="issue-link" href={"/api/v1/#{entry.issue_identifier}"}>JSON details</a>
                       </div>
                     </td>
-                    <td><%= entry.attempt %></td>
-                    <td class="mono"><%= entry.due_at || "n/a" %></td>
-                    <td><%= entry.error || "n/a" %></td>
+                    <td>{entry.attempt}</td>
+                    <td class="mono">{entry.due_at || "n/a"}</td>
+                    <td>{entry.error || "n/a"}</td>
                   </tr>
                 </tbody>
               </table>
