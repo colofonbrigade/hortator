@@ -3,106 +3,12 @@ defmodule Trackers.Linear.Client do
   Thin Linear GraphQL client for polling candidate issues.
   """
 
-  require Logger
-  alias Trackers.Linear.ResponseDecoder
   alias Schema.Tracker.Issue
+  alias Trackers.Linear.GraphQL
+  alias Trackers.Linear.Queries
+  alias Trackers.Linear.ResponseDecoder
 
   @issue_page_size 50
-  @max_error_body_log_bytes 1_000
-
-  @query """
-  query HortatorLinearPoll($projectSlug: String!, $stateNames: [String!]!, $first: Int!, $relationFirst: Int!, $after: String) {
-    issues(filter: {project: {slugId: {eq: $projectSlug}}, state: {name: {in: $stateNames}}}, first: $first, after: $after) {
-      nodes {
-        id
-        identifier
-        title
-        description
-        priority
-        state {
-          name
-        }
-        branchName
-        url
-        assignee {
-          id
-        }
-        labels {
-          nodes {
-            name
-          }
-        }
-        inverseRelations(first: $relationFirst) {
-          nodes {
-            type
-            issue {
-              id
-              identifier
-              state {
-                name
-              }
-            }
-          }
-        }
-        createdAt
-        updatedAt
-      }
-      pageInfo {
-        hasNextPage
-        endCursor
-      }
-    }
-  }
-  """
-
-  @query_by_ids """
-  query HortatorLinearIssuesById($ids: [ID!]!, $first: Int!, $relationFirst: Int!) {
-    issues(filter: {id: {in: $ids}}, first: $first) {
-      nodes {
-        id
-        identifier
-        title
-        description
-        priority
-        state {
-          name
-        }
-        branchName
-        url
-        assignee {
-          id
-        }
-        labels {
-          nodes {
-            name
-          }
-        }
-        inverseRelations(first: $relationFirst) {
-          nodes {
-            type
-            issue {
-              id
-              identifier
-              state {
-                name
-              }
-            }
-          }
-        }
-        createdAt
-        updatedAt
-      }
-    }
-  }
-  """
-
-  @viewer_query """
-  query HortatorLinearViewer {
-    viewer {
-      id
-    }
-  }
-  """
 
   @spec fetch_candidate_issues(Trackers.Linear.Tracker.settings()) :: {:ok, [Issue.t()]} | {:error, term()}
   def fetch_candidate_issues(settings) do
@@ -176,28 +82,8 @@ defmodule Trackers.Linear.Client do
 
   @spec graphql(Trackers.Linear.Tracker.settings(), String.t(), map(), keyword()) ::
           {:ok, map()} | {:error, term()}
-  def graphql(settings, query, variables \\ %{}, opts \\ [])
-      when is_binary(query) and is_map(variables) and is_list(opts) do
-    payload = build_graphql_payload(query, variables, Keyword.get(opts, :operation_name))
-    request_fun = Keyword.get(opts, :request_fun, &post_graphql_request(settings, &1, &2))
-
-    with {:ok, headers} <- graphql_headers(settings),
-         {:ok, %{status: 200, body: body}} <- request_fun.(payload, headers) do
-      {:ok, body}
-    else
-      {:ok, response} ->
-        Logger.error(
-          "Linear GraphQL request failed status=#{response.status}" <>
-            linear_error_context(payload, response)
-        )
-
-        {:error, {:linear_api_status, response.status}}
-
-      {:error, reason} ->
-        Logger.error("Linear GraphQL request failed: #{inspect(reason)}")
-        {:error, {:linear_api_request, reason}}
-    end
-  end
+  def graphql(settings, query, variables \\ %{}, opts \\ []),
+    do: GraphQL.graphql(settings, query, variables, opts)
 
   defp do_fetch_by_states(settings, project_slug, state_names, assignee_filter) do
     do_fetch_by_states_page(settings, project_slug, state_names, assignee_filter, nil, [])
@@ -205,7 +91,7 @@ defmodule Trackers.Linear.Client do
 
   defp do_fetch_by_states_page(settings, project_slug, state_names, assignee_filter, after_cursor, acc_issues) do
     with {:ok, body} <-
-           graphql(settings, @query, %{
+           graphql(settings, Queries.poll_query(), %{
              projectSlug: project_slug,
              stateNames: state_names,
              first: @issue_page_size,
@@ -254,7 +140,7 @@ defmodule Trackers.Linear.Client do
   defp do_fetch_issue_states_page(ids, assignee_filter, graphql_fun, acc_issues, issue_order_index) do
     {batch_ids, rest_ids} = Enum.split(ids, @issue_page_size)
 
-    case graphql_fun.(@query_by_ids, %{
+    case graphql_fun.(Queries.issues_by_ids_query(), %{
            ids: batch_ids,
            first: length(batch_ids),
            relationFirst: @issue_page_size
@@ -286,85 +172,6 @@ defmodule Trackers.Linear.Client do
     end)
   end
 
-  defp build_graphql_payload(query, variables, operation_name) do
-    %{
-      "query" => query,
-      "variables" => variables
-    }
-    |> maybe_put_operation_name(operation_name)
-  end
-
-  defp maybe_put_operation_name(payload, operation_name) when is_binary(operation_name) do
-    trimmed = String.trim(operation_name)
-
-    if trimmed == "" do
-      payload
-    else
-      Map.put(payload, "operationName", trimmed)
-    end
-  end
-
-  defp maybe_put_operation_name(payload, _operation_name), do: payload
-
-  defp linear_error_context(payload, response) when is_map(payload) do
-    operation_name =
-      case Map.get(payload, "operationName") do
-        name when is_binary(name) and name != "" -> " operation=#{name}"
-        _ -> ""
-      end
-
-    body =
-      response
-      |> Map.get(:body)
-      |> summarize_error_body()
-
-    operation_name <> " body=" <> body
-  end
-
-  defp summarize_error_body(body) when is_binary(body) do
-    body
-    |> String.replace(~r/\s+/, " ")
-    |> String.trim()
-    |> truncate_error_body()
-    |> inspect()
-  end
-
-  defp summarize_error_body(body) do
-    body
-    |> inspect(limit: 20, printable_limit: @max_error_body_log_bytes)
-    |> truncate_error_body()
-  end
-
-  defp truncate_error_body(body) when is_binary(body) do
-    if byte_size(body) > @max_error_body_log_bytes do
-      binary_part(body, 0, @max_error_body_log_bytes) <> "...<truncated>"
-    else
-      body
-    end
-  end
-
-  defp graphql_headers(settings) do
-    case Map.get(settings, :api_key) do
-      nil ->
-        {:error, :missing_linear_api_token}
-
-      token ->
-        {:ok,
-         [
-           {"Authorization", token},
-           {"Content-Type", "application/json"}
-         ]}
-    end
-  end
-
-  defp post_graphql_request(settings, payload, headers) do
-    Req.post(Map.get(settings, :endpoint),
-      headers: headers,
-      json: payload,
-      connect_options: [timeout: 30_000]
-    )
-  end
-
   defp routing_assignee_filter(settings) do
     case Map.get(settings, :assignee) do
       nil ->
@@ -389,7 +196,7 @@ defmodule Trackers.Linear.Client do
   end
 
   defp resolve_viewer_assignee_filter(settings) do
-    case graphql(settings, @viewer_query, %{}) do
+    case graphql(settings, Queries.viewer_query(), %{}) do
       {:ok, %{"data" => %{"viewer" => viewer}}} when is_map(viewer) ->
         case ResponseDecoder.assignee_id(viewer) do
           nil ->
