@@ -68,7 +68,7 @@ defmodule CLI.StatusDashboard do
     backoff_rows = format_retry_rows(retrying)
 
     ([
-       colorize("╭─ SYMPHONY STATUS", @ansi_bold),
+       colorize("╭─ HORTATOR STATUS", @ansi_bold),
        colorize("│ Agents: ", @ansi_bold) <>
          colorize("#{agent_count}", @ansi_green) <>
          colorize("/", @ansi_gray) <>
@@ -104,7 +104,7 @@ defmodule CLI.StatusDashboard do
 
   def format_snapshot_content(:error, tps, context, _terminal_columns_override) do
     [
-      colorize("╭─ SYMPHONY STATUS", @ansi_bold),
+      colorize("╭─ HORTATOR STATUS", @ansi_bold),
       colorize("│ Orchestrator snapshot unavailable", @ansi_red),
       colorize("│ Throughput: ", @ansi_bold) <> colorize("#{format_tps(tps)} tps", @ansi_cyan),
       format_project_link_lines(context),
@@ -118,7 +118,7 @@ defmodule CLI.StatusDashboard do
   @spec render_offline_status_content() :: String.t()
   def render_offline_status_content do
     [
-      colorize("╭─ SYMPHONY STATUS", @ansi_bold),
+      colorize("╭─ HORTATOR STATUS", @ansi_bold),
       colorize("│ app_status=offline", @ansi_red),
       closing_border()
     ]

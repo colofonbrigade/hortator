@@ -1,0 +1,20 @@
+services:
+  worker1:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "${HORTATOR_LIVE_DOCKER_WORKER_1_PORT}:22"
+    volumes:
+      - ${HORTATOR_LIVE_DOCKER_AUTHORIZED_KEY}:/run/symphony/ssh/authorized_key.pub:ro
+      - ${HORTATOR_LIVE_DOCKER_CLAUDE_CONFIG}:/home/worker/.claude
+
+  worker2:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "${HORTATOR_LIVE_DOCKER_WORKER_2_PORT}:22"
+    volumes:
+      - ${HORTATOR_LIVE_DOCKER_AUTHORIZED_KEY}:/run/symphony/ssh/authorized_key.pub:ro
+      - ${HORTATOR_LIVE_DOCKER_CLAUDE_CONFIG}:/home/worker/.claude
