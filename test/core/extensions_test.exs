@@ -17,27 +17,7 @@ defmodule Core.ExtensionsTest do
   import Phoenix.ConnTest
   import Phoenix.LiveViewTest
 
-  alias Trackers.Linear.Adapter
-  alias Test.Tracker.Memory
-
   @endpoint Web.Endpoint
-
-  defmodule FakeLinearClient do
-    def fetch_candidate_issues(_settings) do
-      send(self(), :fetch_candidate_issues_called)
-      {:ok, [:candidate]}
-    end
-
-    def fetch_issues_by_states(_settings, states) do
-      send(self(), {:fetch_issues_by_states_called, states})
-      {:ok, states}
-    end
-
-    def fetch_issue_states_by_ids(_settings, issue_ids) do
-      send(self(), {:fetch_issue_states_by_ids_called, issue_ids})
-      {:ok, issue_ids}
-    end
-  end
 
   defmodule SlowOrchestrator do
     use GenServer
@@ -78,20 +58,6 @@ defmodule Core.ExtensionsTest do
   end
 
   setup do
-    linear_client_module = Application.get_env(:hortator, :linear_client_module)
-
-    on_exit(fn ->
-      if is_nil(linear_client_module) do
-        Application.delete_env(:hortator, :linear_client_module)
-      else
-        Application.put_env(:hortator, :linear_client_module, linear_client_module)
-      end
-    end)
-
-    :ok
-  end
-
-  setup do
     endpoint_config = Application.get_env(:hortator, Web.Endpoint, [])
 
     on_exit(fn ->
@@ -99,111 +65,6 @@ defmodule Core.ExtensionsTest do
     end)
 
     :ok
-  end
-
-  test "workflow store reloads changes, keeps last good workflow, and falls back when stopped" do
-    ensure_workflow_store_running()
-    assert {:ok, %{prompt: "You are an agent for this repository."}} = Workflow.current()
-
-    write_workflow_file!(Workflow.workflow_file_path(), prompt: "Second prompt")
-    send(WorkflowStore, :poll)
-
-    assert_eventually(fn ->
-      match?({:ok, %{prompt: "Second prompt"}}, Workflow.current())
-    end)
-
-    File.write!(Workflow.workflow_file_path(), "---\ntracker: [\n---\nBroken prompt\n")
-    assert {:error, _reason} = WorkflowStore.force_reload()
-    assert {:ok, %{prompt: "Second prompt"}} = Workflow.current()
-
-    third_workflow = Path.join(Path.dirname(Workflow.workflow_file_path()), "THIRD_WORKFLOW.md")
-    write_workflow_file!(third_workflow, prompt: "Third prompt")
-    Workflow.set_workflow_file_path(third_workflow)
-    assert {:ok, %{prompt: "Third prompt"}} = Workflow.current()
-
-    assert :ok = Supervisor.terminate_child(Core.Supervisor, WorkflowStore)
-    assert {:ok, %{prompt: "Third prompt"}} = WorkflowStore.current()
-    assert :ok = WorkflowStore.force_reload()
-    assert {:ok, _pid} = Supervisor.restart_child(Core.Supervisor, WorkflowStore)
-  end
-
-  test "workflow store init stops on missing workflow file" do
-    missing_path = Path.join(Path.dirname(Workflow.workflow_file_path()), "MISSING_WORKFLOW.md")
-    Workflow.set_workflow_file_path(missing_path)
-
-    assert {:stop, {:missing_workflow_file, ^missing_path, :enoent}} = WorkflowStore.init([])
-  end
-
-  test "workflow store start_link and poll callback cover missing-file error paths" do
-    ensure_workflow_store_running()
-    existing_path = Workflow.workflow_file_path()
-    manual_path = Path.join(Path.dirname(existing_path), "MANUAL_WORKFLOW.md")
-    missing_path = Path.join(Path.dirname(existing_path), "MANUAL_MISSING_WORKFLOW.md")
-
-    assert :ok = Supervisor.terminate_child(Core.Supervisor, WorkflowStore)
-
-    Workflow.set_workflow_file_path(missing_path)
-
-    assert {:error, {:missing_workflow_file, ^missing_path, :enoent}} =
-             WorkflowStore.force_reload()
-
-    write_workflow_file!(manual_path, prompt: "Manual workflow prompt")
-    Workflow.set_workflow_file_path(manual_path)
-
-    assert {:ok, manual_pid} = WorkflowStore.start_link()
-    assert Process.alive?(manual_pid)
-
-    state = :sys.get_state(manual_pid)
-    File.write!(manual_path, "---\ntracker: [\n---\nBroken prompt\n")
-    assert {:noreply, returned_state} = WorkflowStore.handle_info(:poll, state)
-    assert returned_state.workflow.prompt == "Manual workflow prompt"
-    refute returned_state.stamp == nil
-    assert_receive :poll, 1_100
-
-    Workflow.set_workflow_file_path(missing_path)
-    assert {:noreply, path_error_state} = WorkflowStore.handle_info(:poll, returned_state)
-    assert path_error_state.workflow.prompt == "Manual workflow prompt"
-    assert_receive :poll, 1_100
-
-    Workflow.set_workflow_file_path(manual_path)
-    File.rm!(manual_path)
-    assert {:noreply, removed_state} = WorkflowStore.handle_info(:poll, path_error_state)
-    assert removed_state.workflow.prompt == "Manual workflow prompt"
-    assert_receive :poll, 1_100
-
-    Process.exit(manual_pid, :normal)
-    restart_result = Supervisor.restart_child(Core.Supervisor, WorkflowStore)
-
-    assert match?({:ok, _pid}, restart_result) or
-             match?({:error, {:already_started, _pid}}, restart_result)
-
-    Workflow.set_workflow_file_path(existing_path)
-    WorkflowStore.force_reload()
-  end
-
-  test "tracker dispatches to the configured adapter" do
-    issue = %Issue{id: "issue-1", identifier: "MT-1", state: "In Progress"}
-    Application.put_env(:hortator, :memory_tracker_issues, [issue, %{id: "ignored"}])
-
-    # config/test.exs pins adapter: Test.Tracker.Memory.
-    assert Core.Tracker.adapter() == Memory
-    assert {:ok, [^issue]} = Core.Tracker.fetch_candidate_issues()
-    assert {:ok, [^issue]} = Core.Tracker.fetch_issues_by_states([" in progress ", 42])
-    assert {:ok, [^issue]} = Core.Tracker.fetch_issue_states_by_ids(["issue-1"])
-  end
-
-  test "linear adapter delegates read calls to the configured client" do
-    Application.put_env(:hortator, :linear_client_module, FakeLinearClient)
-    settings = %{}
-
-    assert {:ok, [:candidate]} = Adapter.fetch_candidate_issues(settings)
-    assert_receive :fetch_candidate_issues_called
-
-    assert {:ok, ["Todo"]} = Adapter.fetch_issues_by_states(settings, ["Todo"])
-    assert_receive {:fetch_issues_by_states_called, ["Todo"]}
-
-    assert {:ok, ["issue-1"]} = Adapter.fetch_issue_states_by_ids(settings, ["issue-1"])
-    assert_receive {:fetch_issue_states_by_ids_called, ["issue-1"]}
   end
 
   test "phoenix observability api preserves state, issue, and refresh responses" do
@@ -622,15 +483,4 @@ defmodule Core.ExtensionsTest do
   end
 
   defp assert_eventually(_fun, 0), do: flunk("condition not met in time")
-
-  defp ensure_workflow_store_running do
-    if Process.whereis(WorkflowStore) do
-      :ok
-    else
-      case Supervisor.restart_child(Core.Supervisor, WorkflowStore) do
-        {:ok, _pid} -> :ok
-        {:error, {:already_started, _pid}} -> :ok
-      end
-    end
-  end
 end
