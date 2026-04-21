@@ -12,6 +12,7 @@ services:
       - SSH_AUTH_SOCK=/ssh-agent
       - LINEAR_API_KEY=${LINEAR_API_KEY:-}
       - GH_TOKEN=${GH_TOKEN:-}
+      - ANTHROPIC_BASE_URL=${ANTHROPIC_BASE_URL:-}
     ports:
       - "22"
 

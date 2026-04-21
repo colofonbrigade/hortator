@@ -47,5 +47,11 @@ else
   echo "[hortator] WARNING: GH_TOKEN not set; gh CLI will not authenticate"
 fi
 
+# --- Anthropic API proxy ---
+if [ -n "$ANTHROPIC_BASE_URL" ]; then
+  echo "ANTHROPIC_BASE_URL=$ANTHROPIC_BASE_URL" >> /home/worker/.ssh/environment
+  echo "[hortator] ANTHROPIC_BASE_URL=$ANTHROPIC_BASE_URL"
+fi
+
 # Start sshd in foreground
 exec /usr/sbin/sshd -D -e
