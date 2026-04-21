@@ -4,10 +4,8 @@ defmodule Core.StatusDashboard do
   maintains a rolling token-throughput window, and periodically renders to
   stdout via `CLI.StatusDashboard` (pure renderer).
 
-  Config reads (workspace root, project slug, server host/port, max agents,
-  dashboard enable flag) live here; they get bundled into a context map and
-  passed into the renderer on every tick. The renderer itself knows nothing
-  about Application env.
+  Context helpers (config reads, snapshot formatting) live in
+  `Core.StatusDashboard.Context`.
   """
 
   use GenServer
@@ -16,7 +14,7 @@ defmodule Core.StatusDashboard do
   alias CLI.StatusDashboard, as: Renderer
   alias Core.Config
   alias Core.ObservabilityPubSub
-  alias Core.Orchestrator
+  alias Core.StatusDashboard.Context
 
   @minimum_idle_rerender_ms 1_000
   @render_dashboard? Application.compile_env!(:hortator, __MODULE__)[:render]
@@ -181,10 +179,10 @@ defmodule Core.StatusDashboard do
 
   defp maybe_render(state) do
     now_ms = System.monotonic_time(:millisecond)
-    {snapshot_data, token_samples} = snapshot_with_samples(state.token_samples, now_ms)
+    {snapshot_data, token_samples} = Context.snapshot_with_samples(state.token_samples, now_ms)
     state = Map.put(state, :token_samples, token_samples)
 
-    current_tokens = snapshot_total_tokens(snapshot_data)
+    current_tokens = Context.snapshot_total_tokens(snapshot_data)
 
     {tps_second, tps} =
       Renderer.throttled_tps(
@@ -201,7 +199,7 @@ defmodule Core.StatusDashboard do
       |> Map.put(:last_tps_value, tps)
 
     if snapshot_data != state.last_snapshot_fingerprint or periodic_rerender_due?(state, now_ms) do
-      content = Renderer.format_snapshot_content(snapshot_data, tps, render_context())
+      content = Renderer.format_snapshot_content(snapshot_data, tps, Context.render_context())
 
       state
       |> maybe_update_snapshot_fingerprint(snapshot_data)
@@ -292,72 +290,6 @@ defmodule Core.StatusDashboard do
     error in [ArgumentError, RuntimeError] ->
       Logger.warning("Failed rendering terminal dashboard frame: #{Exception.message(error)}")
       %{state | pending_content: nil, flush_timer_ref: nil}
-  end
-
-  defp snapshot_with_samples(token_samples, now_ms) do
-    case snapshot_payload() do
-      {:ok, %{running: running, retrying: retrying, agent_totals: agent_totals} = snapshot} ->
-        total_tokens = Map.get(agent_totals, :total_tokens, 0)
-
-        {
-          {:ok,
-           %{
-             running: running,
-             retrying: retrying,
-             agent_totals: agent_totals,
-             polling: Map.get(snapshot, :polling)
-           }},
-          Renderer.update_token_samples(token_samples, now_ms, total_tokens)
-        }
-
-      :error ->
-        {
-          :error,
-          Renderer.prune_samples(token_samples, now_ms)
-        }
-    end
-  end
-
-  defp snapshot_payload do
-    if Process.whereis(Orchestrator) do
-      case Orchestrator.snapshot() do
-        %{
-          running: running,
-          retrying: retrying,
-          agent_totals: agent_totals
-        } = snapshot
-        when is_list(running) and is_list(retrying) ->
-          {:ok,
-           %{
-             running: running,
-             retrying: retrying,
-             agent_totals: agent_totals,
-             polling: Map.get(snapshot, :polling)
-           }}
-
-        _ ->
-          :error
-      end
-    else
-      :error
-    end
-  end
-
-  defp snapshot_total_tokens({:ok, %{agent_totals: agent_totals}}) when is_map(agent_totals) do
-    Map.get(agent_totals, :total_tokens, 0)
-  end
-
-  defp snapshot_total_tokens(_snapshot_data), do: 0
-
-  defp render_context do
-    settings = Config.settings!()
-
-    %{
-      max_agents: settings.agent.max_concurrent_agents,
-      dashboard_host: settings.server.host,
-      dashboard_port: Core.Config.server_port(),
-      project_slug: settings.tracker.project_slug
-    }
   end
 
   defp dashboard_enabled?, do: @render_dashboard?

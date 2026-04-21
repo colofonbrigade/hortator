@@ -7,6 +7,8 @@ defmodule Web.DashboardLive do
 
   alias Core.ObservabilityPubSub
   alias Web.{Endpoint, Presenter}
+
+  import Web.DashboardLive.Formatters
   @runtime_tick_ms 1_000
 
   @impl true
@@ -260,119 +262,7 @@ defmodule Web.DashboardLive do
     Utils.Runtime.get(:endpoint_snapshot_timeout_ms, Endpoint.config(:snapshot_timeout_ms) || 15_000)
   end
 
-  defp completed_runtime_seconds(payload) do
-    payload.agent_totals.seconds_running || 0
-  end
-
-  defp total_runtime_seconds(payload, now) do
-    completed_runtime_seconds(payload) +
-      Enum.reduce(payload.running, 0, fn entry, total ->
-        total + runtime_seconds_from_started_at(entry.started_at, now)
-      end)
-  end
-
-  defp format_runtime_and_turns(started_at, turn_count, now) when is_integer(turn_count) and turn_count > 0 do
-    "#{format_runtime_seconds(runtime_seconds_from_started_at(started_at, now))} / #{turn_count}"
-  end
-
-  defp format_runtime_and_turns(started_at, _turn_count, now),
-    do: format_runtime_seconds(runtime_seconds_from_started_at(started_at, now))
-
-  defp format_runtime_seconds(seconds) when is_number(seconds) do
-    whole_seconds = max(trunc(seconds), 0)
-    mins = div(whole_seconds, 60)
-    secs = rem(whole_seconds, 60)
-    "#{mins}m #{secs}s"
-  end
-
-  defp runtime_seconds_from_started_at(%DateTime{} = started_at, %DateTime{} = now) do
-    DateTime.diff(now, started_at, :second)
-  end
-
-  defp runtime_seconds_from_started_at(started_at, %DateTime{} = now) when is_binary(started_at) do
-    case DateTime.from_iso8601(started_at) do
-      {:ok, parsed, _offset} -> runtime_seconds_from_started_at(parsed, now)
-      _ -> 0
-    end
-  end
-
-  defp runtime_seconds_from_started_at(_started_at, _now), do: 0
-
-  defp format_int(value) when is_integer(value) do
-    value
-    |> Integer.to_string()
-    |> String.reverse()
-    |> String.replace(~r/.{3}(?=.)/, "\\0,")
-    |> String.reverse()
-  end
-
-  defp format_int(_value), do: "n/a"
-
-  defp state_badge_class(state) do
-    base = "state-badge"
-    normalized = state |> to_string() |> String.downcase()
-
-    cond do
-      String.contains?(normalized, ["progress", "running", "active"]) -> "#{base} state-badge-active"
-      String.contains?(normalized, ["blocked", "error", "failed"]) -> "#{base} state-badge-danger"
-      String.contains?(normalized, ["todo", "queued", "pending", "retry"]) -> "#{base} state-badge-warning"
-      true -> base
-    end
-  end
-
   defp schedule_runtime_tick do
     Process.send_after(self(), :runtime_tick, @runtime_tick_ms)
-  end
-
-  defp rate_limit_badge_label(info) when is_map(info) do
-    case Map.get(info, "status") || Map.get(info, :status) do
-      status when status in [nil, "allowed", :allowed] -> nil
-      status -> to_string(status)
-    end
-  end
-
-  defp rate_limit_badge_label(_info), do: nil
-
-  defp rate_limit_badge_title(info) when is_map(info) do
-    type = Map.get(info, "rateLimitType") || Map.get(info, :rateLimitType) || "unknown"
-    resets = Map.get(info, "resetsAt") || Map.get(info, :resetsAt)
-
-    "type: #{type}" <>
-      case resets do
-        n when is_integer(n) -> " · resets #{format_reset_iso(n)}"
-        _ -> ""
-      end
-  end
-
-  defp rate_limit_badge_title(_info), do: ""
-
-  defp rate_limit_summary_line(running) when is_list(running) do
-    throttled =
-      running
-      |> Enum.map(& &1.rate_limit_info)
-      |> Enum.filter(&(is_map(&1) and rate_limit_badge_label(&1)))
-
-    case throttled do
-      [] ->
-        nil
-
-      infos ->
-        statuses =
-          infos
-          |> Enum.map(&rate_limit_badge_label/1)
-          |> Enum.uniq()
-          |> Enum.join(", ")
-
-        "Rate limit: #{statuses} — #{length(infos)} session(s) affected"
-    end
-  end
-
-  defp rate_limit_summary_line(_running), do: nil
-
-  defp format_reset_iso(unix_seconds) when is_integer(unix_seconds) do
-    case DateTime.from_unix(unix_seconds) do
-      {:ok, dt} -> Calendar.strftime(dt, "%H:%M UTC")
-      _ -> "?"
-    end
   end
 end
