@@ -1,4 +1,4 @@
-defmodule Core.WorkflowStore do
+defmodule Workflow.Store do
   @moduledoc """
   Caches the last known good workflow and reloads it when `WORKFLOW.md` changes.
   """
@@ -6,7 +6,7 @@ defmodule Core.WorkflowStore do
   use GenServer
   require Logger
 
-  alias Core.Workflow
+  alias Workflow
 
   @poll_interval_ms 1_000
 

@@ -27,8 +27,34 @@ defmodule Agents.Claude.Session do
 
   require Logger
 
+  import Ecto.Changeset
+
   alias Agents.Claude.Session.CommandBuilder
   alias Agents.Claude.Session.StreamParser
+  alias Schema.Config.Claude, as: ClaudeConfig
+
+  @spec validate_workflow_config(ClaudeConfig.t(), map()) :: Ecto.Changeset.t()
+  def validate_workflow_config(%ClaudeConfig{} = schema, attrs) do
+    schema
+    |> cast(
+      attrs,
+      [
+        :command,
+        :model,
+        :permission_mode,
+        :mcp_config_path,
+        :effort,
+        :turn_timeout_ms,
+        :read_timeout_ms,
+        :stall_timeout_ms
+      ],
+      empty_values: []
+    )
+    |> validate_required([:command, :model, :permission_mode])
+    |> validate_number(:turn_timeout_ms, greater_than: 0)
+    |> validate_number(:read_timeout_ms, greater_than: 0)
+    |> validate_number(:stall_timeout_ms, greater_than_or_equal_to: 0)
+  end
 
   @type claude_settings :: %{
           optional(:command) => String.t() | nil,

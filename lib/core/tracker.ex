@@ -10,7 +10,20 @@ defmodule Core.Tracker do
   Linear backend.
   """
 
+  import Ecto.Changeset
+
   alias Core.Config
+  alias Schema.Config.Tracker, as: TrackerConfig
+
+  @spec validate_workflow_config(TrackerConfig.t(), map()) :: Ecto.Changeset.t()
+  def validate_workflow_config(%TrackerConfig{} = schema, attrs) do
+    cast(
+      schema,
+      attrs,
+      [:kind, :endpoint, :api_key, :project_slug, :assignee, :active_states, :terminal_states],
+      empty_values: []
+    )
+  end
 
   @spec fetch_candidate_issues() :: {:ok, [term()]} | {:error, term()}
   def fetch_candidate_issues, do: adapter().fetch_candidate_issues(settings())

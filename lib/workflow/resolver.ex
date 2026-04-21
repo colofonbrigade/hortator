@@ -1,8 +1,8 @@
-defmodule Core.Config.Schema.Resolver do
+defmodule Workflow.Resolver do
   @moduledoc """
   Pure helpers for resolving `$VAR` references and path/secret values from
-  workflow YAML. Used by `Core.Config.Schema.finalize_settings/1` to hand
-  back fully-resolved settings after validation.
+  workflow YAML. Used during workflow loading to hand back fully-resolved
+  settings after validation.
   """
 
   @spec resolve_secret(nil | String.t(), String.t() | nil) :: String.t() | nil

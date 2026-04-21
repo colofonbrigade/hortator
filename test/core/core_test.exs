@@ -1021,17 +1021,17 @@ defmodule Core.CoreTest do
 
   test "prompt builder reports workflow load failures separately from template parse errors" do
     original_workflow_path = Workflow.workflow_file_path()
-    workflow_store_pid = Process.whereis(Core.WorkflowStore)
+    workflow_store_pid = Process.whereis(Workflow.Store)
 
     on_exit(fn ->
       Workflow.set_workflow_file_path(original_workflow_path)
 
-      if is_pid(workflow_store_pid) and is_nil(Process.whereis(Core.WorkflowStore)) do
-        Supervisor.restart_child(Core.Supervisor, Core.WorkflowStore)
+      if is_pid(workflow_store_pid) and is_nil(Process.whereis(Workflow.Store)) do
+        Supervisor.restart_child(Core.Supervisor, Workflow.Store)
       end
     end)
 
-    assert :ok = Supervisor.terminate_child(Core.Supervisor, Core.WorkflowStore)
+    assert :ok = Supervisor.terminate_child(Core.Supervisor, Workflow.Store)
 
     Workflow.set_workflow_file_path(Path.join(System.tmp_dir!(), "missing-workflow-#{System.unique_integer([:positive])}.md"))
 

@@ -6,7 +6,18 @@ defmodule Core.Workspace.Hooks do
   """
 
   require Logger
+
+  import Ecto.Changeset
+
   alias Core.Config
+  alias Schema.Config.Hooks, as: HooksConfig
+
+  @spec validate_workflow_config(HooksConfig.t(), map()) :: Ecto.Changeset.t()
+  def validate_workflow_config(%HooksConfig{} = schema, attrs) do
+    schema
+    |> cast(attrs, [:after_create, :before_run, :after_run, :before_remove, :timeout_ms], empty_values: [])
+    |> validate_number(:timeout_ms, greater_than: 0)
+  end
 
   @spec run_local_hook(String.t(), Path.t(), map(), String.t()) :: :ok | {:error, term()}
   def run_local_hook(command, workspace, issue_context, hook_name) do

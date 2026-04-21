@@ -1,18 +1,29 @@
-defmodule Core.Workflow do
+defmodule Workflow do
   @moduledoc """
   Loads workflow configuration and prompt from a workflow Markdown file.
   `workflows/TEMPLATE.md` is the default; any number of peer workflow files
   can live under `workflows/`.
   """
 
-  alias Core.WorkflowStore
+  use Boundary, deps: [Schema], exports: [Resolver, Store]
+
+  import Ecto.Changeset
+
+  alias Schema.Config.Server, as: ServerConfig
+
+  @spec validate_server_config(ServerConfig.t(), map()) :: Ecto.Changeset.t()
+  def validate_server_config(%ServerConfig{} = schema, attrs) do
+    schema
+    |> cast(attrs, [:port, :host], empty_values: [])
+    |> validate_number(:port, greater_than_or_equal_to: 0)
+  end
 
   @workflow_file_name "workflows/TEMPLATE.md"
 
   @spec workflow_file_path() :: Path.t()
   def workflow_file_path do
     # Reads Application env directly rather than Utils.Runtime because
-    # Core.WorkflowStore is a long-lived GenServer; ProcessTree caching
+    # Workflow.Store is a long-lived GenServer; ProcessTree caching
     # would pin the first-seen value in its dict across test runs.
     Application.get_env(:hortator, :workflow_file_path) ||
       Path.join(File.cwd!(), @workflow_file_name)
@@ -40,9 +51,9 @@ defmodule Core.Workflow do
 
   @spec current() :: {:ok, loaded_workflow()} | {:error, term()}
   def current do
-    case Process.whereis(WorkflowStore) do
+    case Process.whereis(Workflow.Store) do
       pid when is_pid(pid) ->
-        WorkflowStore.current()
+        Workflow.Store.current()
 
       _ ->
         load()
@@ -176,8 +187,8 @@ defmodule Core.Workflow do
   end
 
   defp maybe_reload_store do
-    if Process.whereis(WorkflowStore) do
-      _ = WorkflowStore.force_reload()
+    if Process.whereis(Workflow.Store) do
+      _ = Workflow.Store.force_reload()
     end
 
     :ok

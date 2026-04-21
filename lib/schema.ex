@@ -5,5 +5,20 @@ defmodule Schema do
   boundary" for what belongs here.
   """
 
-  use Boundary, deps: [], exports: [Snapshot, Tracker.Issue]
+  use Boundary,
+    deps: [],
+    exports: [
+      Config,
+      Config.Agent,
+      Config.Claude,
+      Config.Hooks,
+      Config.Observability,
+      Config.Polling,
+      Config.Server,
+      Config.Tracker,
+      Config.Worker,
+      Config.Workspace,
+      Snapshot,
+      Tracker.Issue
+    ]
 end

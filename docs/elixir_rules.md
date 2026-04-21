@@ -123,6 +123,68 @@ Extract a new boundary when a chunk of code:
 
 Extract when these hold simultaneously. Otherwise keep it under an existing namespace.
 
+## Module aliasing
+
+The goal is **readability** — a balance between "very long" and "ambiguous." The target module
+for the function you are calling should always be clear at the call site.
+
+Alias a nested module when **both** conditions hold:
+
+1. The module is used **multiple times** in the target file.
+2. The aliased name **does not create ambiguity** with Elixir core library modules or other
+   modules in the codebase.
+
+When the leaf name alone would be ambiguous, **alias the parent** to partially qualify:
+
+```elixir
+# Good — `Workflow.Store` is unambiguous but `Store` alone would be vague
+alias Workflow
+Workflow.Store.force_reload()
+Workflow.load(path)
+
+# Good — short name is unambiguous in this codebase
+alias Core.Orchestrator.IssueFilter
+IssueFilter.terminal_issue_state?(issue.state, terminal_states)
+```
+
+Avoid aliasing when it hurts clarity:
+
+```elixir
+# Bad — which Store? which Config?
+alias Workflow.Store
+Store.force_reload()
+
+# Bad — `Config` shadows Elixir's Config module
+alias Core.Config
+Config.settings!()
+```
+
+Single-use calls that are already short enough don't need aliasing:
+
+```elixir
+# Fine as-is — one call, reads clearly
+Workflow.Store.force_reload()
+```
+
+Very long fully-qualified paths should be shortened — either alias the parent for partial
+qualification or alias the leaf if the short name is unique:
+
+```elixir
+# Too long at every call site:
+Core.Orchestrator.Reconciliation.terminate_running_issue(state, id, true)
+
+# Better — alias the parent:
+alias Core.Orchestrator
+Orchestrator.Reconciliation.terminate_running_issue(state, id, true)
+
+# Or alias the leaf if it's used many times and the name is clear:
+alias Core.Orchestrator.Reconciliation
+Reconciliation.terminate_running_issue(state, id, true)
+```
+
+The `Credo.Check.Design.AliasUsage` check is disabled in `.credo.exs` to match this convention.
+Trust judgment over mechanical rules.
+
 ## Keeping modules inside a boundary
 
 - Public functions of a boundary are the modules/functions other boundaries are allowed to call.

@@ -3,7 +3,8 @@ defmodule Core.PromptBuilder do
   Builds agent prompts from Linear issue data.
   """
 
-  alias Core.{Config, Workflow}
+  alias Core.Config
+  alias Workflow
 
   @render_opts [strict_variables: true, strict_filters: true]
 

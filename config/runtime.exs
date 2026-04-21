@@ -26,9 +26,9 @@ case System.get_env("HORTATOR_WORKFLOW_FILE") do
     expanded = Path.expand(path)
     config :hortator, :workflow_file_path, expanded
 
-    # Core.Workflow.load/1 is pure: reads the file, parses YAML, expands $VAR
+    # Workflow.load/1 is pure: reads the file, parses YAML, expands $VAR
     # references via System.get_env. Nothing else.
-    case Core.Workflow.load(expanded) do
+    case Workflow.load(expanded) do
       {:ok, %{config: %{"server" => %{"port" => port} = server}}}
       when is_integer(port) and port >= 0 ->
         host = Map.get(server, "host", "127.0.0.1")

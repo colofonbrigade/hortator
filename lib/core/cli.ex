@@ -5,7 +5,8 @@ defmodule Core.CLI do
   different workflow (e.g. `workflows/smoke-test.md` or one you've authored).
   """
 
-  alias Core.{LogFile, Workflow}
+  alias Core.LogFile
+  alias Workflow
 
   @acknowledgement_switch :i_understand_that_this_will_be_running_without_the_usual_guardrails
   @switches [{@acknowledgement_switch, :boolean}, logs_root: :string, port: :integer]

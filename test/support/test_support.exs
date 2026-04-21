@@ -15,8 +15,8 @@ defmodule Core.TestSupport do
       alias Core.PromptBuilder
       alias Core.StatusDashboard
       alias Core.Tracker
-      alias Core.Workflow
-      alias Core.WorkflowStore
+      alias Workflow
+      alias Workflow.Store
       alias Core.Workspace
       alias Trackers.Linear.Client
       alias Schema.Tracker.Issue
@@ -43,7 +43,7 @@ defmodule Core.TestSupport do
         workflow_file = Path.join(workflow_root, "WORKFLOW.md")
         write_workflow_file!(workflow_file)
         Workflow.set_workflow_file_path(workflow_file)
-        if Process.whereis(Core.WorkflowStore), do: Core.WorkflowStore.force_reload()
+        if Process.whereis(Workflow.Store), do: Workflow.Store.force_reload()
         stop_default_http_server()
 
         on_exit(fn ->
@@ -78,9 +78,9 @@ defmodule Core.TestSupport do
     workflow = workflow_content(overrides)
     File.write!(path, workflow)
 
-    if Process.whereis(Core.WorkflowStore) do
+    if Process.whereis(Workflow.Store) do
       try do
-        Core.WorkflowStore.force_reload()
+        Workflow.Store.force_reload()
       catch
         :exit, _reason -> :ok
       end

@@ -5,8 +5,18 @@ defmodule Core.Orchestrator.Polling do
   fresh `tick_token` ref so late timer fires can be safely ignored.
   """
 
+  import Ecto.Changeset
+
   alias Core.Config
+  alias Schema.Config.Polling, as: PollingConfig
   alias Core.Orchestrator.State
+
+  @spec validate_workflow_config(PollingConfig.t(), map()) :: Ecto.Changeset.t()
+  def validate_workflow_config(%PollingConfig{} = schema, attrs) do
+    schema
+    |> cast(attrs, [:interval_ms], empty_values: [])
+    |> validate_number(:interval_ms, greater_than: 0)
+  end
 
   # Slightly above the dashboard render interval so "checking now…" can render.
   @poll_transition_render_delay_ms 20

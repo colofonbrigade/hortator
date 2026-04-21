@@ -4,10 +4,19 @@ defmodule Core.Workspace do
   """
 
   require Logger
+
+  import Ecto.Changeset
+
   alias Core.Config
+  alias Schema.Config.Workspace, as: WorkspaceConfig
   alias Core.Workspace.Hooks
   alias Core.Workspace.Remote
   alias Permissions.PathSafety
+
+  @spec validate_workflow_config(WorkspaceConfig.t(), map()) :: Ecto.Changeset.t()
+  def validate_workflow_config(%WorkspaceConfig{} = schema, attrs) do
+    cast(schema, attrs, [:root], empty_values: [])
+  end
 
   @type worker_host :: String.t() | nil
 

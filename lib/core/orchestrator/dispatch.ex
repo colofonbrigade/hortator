@@ -10,8 +10,11 @@ defmodule Core.Orchestrator.Dispatch do
 
   require Logger
 
+  import Ecto.Changeset
+
   alias Core.AgentRunner
   alias Core.Config
+  alias Schema.Config.Agent, as: AgentConfig
   alias Core.Orchestrator.IssueFilter
   alias Core.Orchestrator.Reconciliation
   alias Core.Orchestrator.Retry
@@ -19,6 +22,45 @@ defmodule Core.Orchestrator.Dispatch do
   alias Core.Orchestrator.WorkerPool
   alias Core.Tracker
   alias Schema.Tracker.Issue
+
+  @spec validate_workflow_config(AgentConfig.t(), map()) :: Ecto.Changeset.t()
+  def validate_workflow_config(%AgentConfig{} = schema, attrs) do
+    schema
+    |> cast(
+      attrs,
+      [:max_concurrent_agents, :max_turns, :max_retry_backoff_ms, :max_concurrent_agents_by_state],
+      empty_values: []
+    )
+    |> validate_number(:max_concurrent_agents, greater_than: 0)
+    |> validate_number(:max_turns, greater_than: 0)
+    |> validate_number(:max_retry_backoff_ms, greater_than: 0)
+    |> update_change(:max_concurrent_agents_by_state, &normalize_state_limits/1)
+    |> validate_state_limits(:max_concurrent_agents_by_state)
+  end
+
+  @doc false
+  @spec normalize_state_limits(nil | map()) :: map()
+  def normalize_state_limits(nil), do: %{}
+
+  def normalize_state_limits(limits) when is_map(limits) do
+    Enum.reduce(limits, %{}, fn {state_name, limit}, acc ->
+      Map.put(acc, Core.Orchestrator.IssueFilter.normalize_issue_state(to_string(state_name)), limit)
+    end)
+  end
+
+  @doc false
+  @spec validate_state_limits(Ecto.Changeset.t(), atom()) :: Ecto.Changeset.t()
+  def validate_state_limits(changeset, field) do
+    validate_change(changeset, field, fn ^field, limits ->
+      Enum.flat_map(limits, fn {state_name, limit} ->
+        cond do
+          to_string(state_name) == "" -> [{field, "state names must not be blank"}]
+          not is_integer(limit) or limit <= 0 -> [{field, "limits must be positive integers"}]
+          true -> []
+        end
+      end)
+    end)
+  end
 
   @spec maybe_dispatch(State.t()) :: State.t()
   def maybe_dispatch(%State{} = state) do

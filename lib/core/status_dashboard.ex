@@ -11,10 +11,25 @@ defmodule Core.StatusDashboard do
   use GenServer
   require Logger
 
+  import Ecto.Changeset
+
   alias CLI.StatusDashboard, as: Renderer
   alias Core.Config
+  alias Schema.Config.Observability, as: ObservabilityConfig
   alias Core.ObservabilityPubSub
   alias Core.StatusDashboard.Context
+
+  @spec validate_workflow_config(ObservabilityConfig.t(), map()) :: Ecto.Changeset.t()
+  def validate_workflow_config(%ObservabilityConfig{} = schema, attrs) do
+    schema
+    |> cast(
+      attrs,
+      [:dashboard_enabled, :refresh_ms, :render_interval_ms],
+      empty_values: []
+    )
+    |> validate_number(:refresh_ms, greater_than: 0)
+    |> validate_number(:render_interval_ms, greater_than: 0)
+  end
 
   @minimum_idle_rerender_ms 1_000
   @render_dashboard? Application.compile_env!(:hortator, __MODULE__)[:render]

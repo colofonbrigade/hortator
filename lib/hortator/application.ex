@@ -6,7 +6,7 @@ defmodule Hortator.Application do
   across all of them.
   """
 
-  use Boundary, top_level?: true, deps: [Core, Web]
+  use Boundary, top_level?: true, deps: [Core, Web, Workflow]
   use Application
 
   @impl true
@@ -18,7 +18,7 @@ defmodule Hortator.Application do
       {DNSCluster, query: Application.get_env(:hortator, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: Core.PubSub},
       {Task.Supervisor, name: Core.TaskSupervisor},
-      Core.WorkflowStore,
+      Workflow.Store,
       Core.Orchestrator,
       Core.StatusDashboard,
       Web.Endpoint

@@ -1,6 +1,5 @@
 defmodule Core.WorkspaceAndConfigTest do
   use Core.TestSupport
-  alias Core.Config.Schema
   alias Ecto.Changeset
   alias Trackers.Linear.Client
 
@@ -898,9 +897,9 @@ defmodule Core.WorkspaceAndConfigTest do
   end
 
   test "schema helpers cover state limit validation" do
-    assert Schema.normalize_state_limits(nil) == %{}
+    assert Core.Orchestrator.Dispatch.normalize_state_limits(nil) == %{}
 
-    assert Schema.normalize_state_limits(%{"In Progress" => 2, todo: 1}) == %{
+    assert Core.Orchestrator.Dispatch.normalize_state_limits(%{"In Progress" => 2, todo: 1}) == %{
              "todo" => 1,
              "in progress" => 2
            }
@@ -908,7 +907,7 @@ defmodule Core.WorkspaceAndConfigTest do
     changeset =
       {%{}, %{limits: :map}}
       |> Changeset.cast(%{limits: %{"" => 1, "todo" => 0}}, [:limits])
-      |> Schema.validate_state_limits(:limits)
+      |> Core.Orchestrator.Dispatch.validate_state_limits(:limits)
 
     assert changeset.errors == [
              limits: {"state names must not be blank", []},
@@ -939,7 +938,7 @@ defmodule Core.WorkspaceAndConfigTest do
     end)
 
     assert {:ok, settings} =
-             Schema.parse(%{
+             Core.Config.parse(%{
                tracker: %{api_key: "$#{empty_secret_env}"},
                workspace: %{root: "$#{missing_workspace_env}"},
                claude: %{model: "claude-opus-4-6"}
@@ -950,7 +949,7 @@ defmodule Core.WorkspaceAndConfigTest do
     assert settings.claude.model == "claude-opus-4-6"
 
     assert {:ok, settings} =
-             Schema.parse(%{
+             Core.Config.parse(%{
                tracker: %{api_key: "$#{missing_secret_env}"},
                workspace: %{root: ""}
              })

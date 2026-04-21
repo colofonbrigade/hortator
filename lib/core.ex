@@ -6,7 +6,7 @@ defmodule Core do
   """
 
   use Boundary,
-    deps: [CLI, Schema, Permissions, Transport, Agents, Trackers, Utils],
+    deps: [CLI, Infra, Schema, Permissions, Transport, Agents, Trackers, Utils, Workflow],
     exports: [
       AgentRunner,
       CLI,
@@ -18,8 +18,6 @@ defmodule Core do
       SpecsCheck,
       StatusDashboard,
       Tracker,
-      Workflow,
-      WorkflowStore,
       Workspace
     ]
 
