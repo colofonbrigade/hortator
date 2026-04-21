@@ -1,0 +1,19 @@
+services:
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    volumes:
+      - ${CLAUDE_CONFIG_DIR:-~/.claude}:/home/worker/.claude-mount:ro
+      - ${HORTATOR_SSH_PUBKEY:-~/.ssh/id_ed25519.pub}:/home/worker/.ssh/mounted_authorized_keys:ro
+      - worker-workspaces:/home/worker/workspaces
+    environment:
+      - LINEAR_API_KEY=${LINEAR_API_KEY:-}
+      - GITHUB_TOKEN=${GITHUB_TOKEN:-}
+      - GH_TOKEN=${GITHUB_TOKEN:-}
+      - GIT_SSH_COMMAND=ssh -o StrictHostKeyChecking=no
+    ports:
+      - "${HORTATOR_WORKER_PORT_BASE:-2222}:22"
+
+volumes:
+  worker-workspaces:

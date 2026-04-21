@@ -1,4 +1,4 @@
-.PHONY: help all setup deps build fmt fmt-check lint test coverage ci dialyzer e2e
+.PHONY: help all setup deps build fmt fmt-check lint test coverage ci dialyzer e2e workers-up workers-down workers-status
 
 MIX ?= mix
 
@@ -39,6 +39,15 @@ dialyzer:
 # to be set. Not part of `make all` — run explicitly.
 e2e:
 	HORTATOR_RUN_LIVE_E2E=1 $(MIX) test test/core/live_e2e_test.exs
+
+workers-up:
+	$(MIX) infra.up workflows/docker-compose.md
+
+workers-down:
+	$(MIX) infra.down workflows/docker-compose.md
+
+workers-status:
+	$(MIX) infra.status workflows/docker-compose.md
 
 ci:
 	$(MAKE) setup

@@ -18,7 +18,16 @@ defmodule Core.MixProject do
       # (phx-generated UI kit, not worth hand-testing), `Web.Layouts`
       # (template-only), `Trackers.Linear.Client`, and the logs/retry paths
       # of `Core.Orchestrator` and `Agents.Claude.Session`.
-      test_coverage: [summary: [threshold: 70]],
+      test_coverage: [
+        summary: [threshold: 70],
+        ignore_modules: [
+          Infra.Provider.DockerCompose,
+          Infra.Provider.ECS,
+          Mix.Tasks.Infra.Up,
+          Mix.Tasks.Infra.Down,
+          Mix.Tasks.Infra.Status
+        ]
+      ],
       # Mix.Task implementations reference Mix.shell/0 and Mix.raise/1, so the
       # PLT needs the :mix application loaded.
       dialyzer: [plt_add_apps: [:mix]]
