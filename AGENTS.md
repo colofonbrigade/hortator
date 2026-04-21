@@ -22,8 +22,9 @@ Hortator is an Elixir agent orchestration service that polls Linear, creates per
   - Never run an agent turn's cwd in the source repo.
   - Workspaces must stay under configured workspace root.
 - Orchestrator behavior is stateful and concurrency-sensitive; preserve retry, reconciliation, and cleanup semantics.
+- Read `docs/architecture.md` for non-obvious patterns, naming decisions, and gotchas (OTP app name vs module namespaces, escript quirks, orchestrator decomposition, telemetry absence, test injection patterns). **Read this first if you're new to the codebase.**
 - Follow `docs/logging.md` for logging conventions and required issue/session context fields.
-- Follow `docs/elixir_rules.md` for module boundary rules (each top-level `lib/<namespace>` is a boundary; cross-boundary deps must form a DAG; `Web` may depend on `Core` but not vice versa). See `docs/local_elixir_rules.md` for Hortator-specific boundary assignments (e.g., `Linear` as its own boundary).
+- Follow `docs/elixir_rules.md` for module boundary rules (each top-level `lib/<namespace>` is a boundary; cross-boundary deps must form a DAG; `Web` may depend on `Core` but not vice versa). See `docs/local_elixir_rules.md` for Hortator-specific boundary assignments.
 - Follow `docs/elixir_testing.md` for testing conventions: pin defaults in `config/test.exs`, use `Test.*` test doubles under `test/support/`, prefer direct unit tests over supervision-tree setups, and mark integration tests explicitly.
 
 ## Tests and Validation
