@@ -10,6 +10,7 @@ defmodule Schema.Config.Worker do
   @type t :: %__MODULE__{}
 
   embedded_schema do
+    field(:provider, :string, default: "static")
     field(:ssh_hosts, {:array, :string}, default: [])
     field(:max_concurrent_agents_per_host, :integer)
   end

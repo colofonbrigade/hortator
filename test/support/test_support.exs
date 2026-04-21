@@ -44,6 +44,7 @@ defmodule Core.TestSupport do
         write_workflow_file!(workflow_file)
         Workflow.set_workflow_file_path(workflow_file)
         if Process.whereis(Workflow.Store), do: Workflow.Store.force_reload()
+        if Process.whereis(Infra.HostManager), do: Infra.HostManager.refresh()
         stop_default_http_server()
 
         on_exit(fn ->
@@ -81,6 +82,14 @@ defmodule Core.TestSupport do
     if Process.whereis(Workflow.Store) do
       try do
         Workflow.Store.force_reload()
+      catch
+        :exit, _reason -> :ok
+      end
+    end
+
+    if Process.whereis(Infra.HostManager) do
+      try do
+        Infra.HostManager.refresh()
       catch
         :exit, _reason -> :ok
       end

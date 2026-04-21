@@ -1,10 +1,9 @@
 defmodule Infra do
   @moduledoc """
-  Worker-host lifecycle management. Today contains `Infra.WorkerConfig`
-  (worker section validation). Future: `Infra.Provider` behaviour,
-  `Infra.HostManager` GenServer, provider implementations for Docker
-  Compose, ECS, etc.
+  Worker-host lifecycle management. `Infra.Provider` is the behaviour;
+  `Infra.HostManager` is the GenServer that holds the live host list.
+  `Infra.WorkerConfig` validates the `worker:` section of workflow YAML.
   """
 
-  use Boundary, deps: [Schema, Utils], exports: [WorkerConfig]
+  use Boundary, deps: [Schema, Utils, Workflow], exports: [HostManager, Provider, WorkerConfig]
 end

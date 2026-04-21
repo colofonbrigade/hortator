@@ -6,7 +6,7 @@ defmodule Hortator.Application do
   across all of them.
   """
 
-  use Boundary, top_level?: true, deps: [Core, Web, Workflow]
+  use Boundary, top_level?: true, deps: [Core, Infra, Web, Workflow]
   use Application
 
   @impl true
@@ -19,6 +19,7 @@ defmodule Hortator.Application do
       {Phoenix.PubSub, name: Core.PubSub},
       {Task.Supervisor, name: Core.TaskSupervisor},
       Workflow.Store,
+      {Infra.HostManager, worker_init_opts()},
       Core.Orchestrator,
       Core.StatusDashboard,
       Web.Endpoint
@@ -40,5 +41,10 @@ defmodule Hortator.Application do
   def config_change(changed, _new, removed) do
     Web.Endpoint.config_change(changed, removed)
     :ok
+  end
+
+  defp worker_init_opts do
+    worker = Core.Config.settings!().worker
+    [provider: worker.provider, ssh_hosts: worker.ssh_hosts]
   end
 end

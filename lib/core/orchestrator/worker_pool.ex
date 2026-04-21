@@ -1,8 +1,8 @@
 defmodule Core.Orchestrator.WorkerPool do
   @moduledoc """
   Worker-host scheduling for the orchestrator: capacity checks, preferred-host
-  stickiness for retries, least-loaded fallback. Reads configured SSH hosts
-  and per-host concurrency caps from `Core.Config`.
+  stickiness for retries, least-loaded fallback. Reads the live host list from
+  `Infra.HostManager` and per-host concurrency caps from `Core.Config`.
   """
 
   alias Core.Config
@@ -18,7 +18,7 @@ defmodule Core.Orchestrator.WorkerPool do
   @spec select_worker_host(State.t(), String.t() | nil) ::
           String.t() | nil | :no_worker_capacity
   def select_worker_host(%State{} = state, preferred_worker_host) do
-    case Config.settings!().worker.ssh_hosts do
+    case Infra.HostManager.list_hosts() do
       [] ->
         nil
 
