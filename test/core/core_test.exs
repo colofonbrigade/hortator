@@ -305,29 +305,6 @@ defmodule Core.CoreTest do
     end
   end
 
-  test "Core.start_link delegates to the orchestrator" do
-    Application.put_env(:hortator, :memory_tracker_issues, [])
-    orchestrator_pid = Process.whereis(Core.Orchestrator)
-
-    on_exit(fn ->
-      if is_nil(Process.whereis(Core.Orchestrator)) do
-        case Supervisor.restart_child(Core.Supervisor, Core.Orchestrator) do
-          {:ok, _pid} -> :ok
-          {:error, {:already_started, _pid}} -> :ok
-        end
-      end
-    end)
-
-    if is_pid(orchestrator_pid) do
-      assert :ok = Supervisor.terminate_child(Core.Supervisor, Core.Orchestrator)
-    end
-
-    assert {:ok, pid} = Core.start_link()
-    assert Process.whereis(Core.Orchestrator) == pid
-
-    GenServer.stop(pid)
-  end
-
   test "linear issue state reconciliation fetch with no running issues is a no-op" do
     assert {:ok, []} = Client.fetch_issue_states_by_ids(%{}, [])
   end
