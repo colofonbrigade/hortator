@@ -8,18 +8,26 @@ if [ -f /home/worker/.ssh/mounted_authorized_keys ]; then
   chmod 600 /home/worker/.ssh/authorized_keys
 fi
 
-# --- SSH private key (for worker -> GitHub git operations) ---
-if [ -f /home/worker/.ssh/mounted_id ]; then
-  cp /home/worker/.ssh/mounted_id /home/worker/.ssh/id_ed25519
-  chown worker:worker /home/worker/.ssh/id_ed25519
-  chmod 600 /home/worker/.ssh/id_ed25519
-fi
-
 chmod 700 /home/worker/.ssh
 
 # Add github.com to known_hosts so git clone doesn't prompt
 ssh-keyscan -t ed25519 github.com >> /home/worker/.ssh/known_hosts 2>/dev/null || true
 chown worker:worker /home/worker/.ssh/known_hosts
+
+# --- SSH agent forwarding ---
+# The host's SSH agent socket is mounted at /ssh-agent. Make it accessible
+# to the worker user and set it in /etc/environment so sshd login sessions
+# pick it up (sshd doesn't source .bashrc or inherit Docker env vars).
+if [ -S /ssh-agent ]; then
+  chmod 777 /ssh-agent
+  echo 'SSH_AUTH_SOCK=/ssh-agent' >> /etc/environment
+  echo 'SSH_AUTH_SOCK=/ssh-agent' >> /home/worker/.ssh/environment
+  chown worker:worker /home/worker/.ssh/environment
+  echo 'export SSH_AUTH_SOCK=/ssh-agent' >> /home/worker/.bashrc
+  echo "[hortator] SSH agent socket forwarded"
+else
+  echo "[hortator] WARNING: SSH agent socket not available at /ssh-agent"
+fi
 
 # --- Claude credentials ---
 if [ -d /home/worker/.claude-mount ]; then
@@ -27,14 +35,16 @@ if [ -d /home/worker/.claude-mount ]; then
   chown -R worker:worker /home/worker/.claude
 fi
 
-# --- GitHub token credential helper for HTTPS clones ---
-if [ -n "$GITHUB_TOKEN" ]; then
-  su - worker -c 'git config --global credential.helper "!f() { echo password=\$GITHUB_TOKEN; }; f"'
-  su - worker -c "gh auth status" 2>/dev/null \
-    && echo "[hortator] gh CLI authenticated" \
-    || echo "[hortator] WARNING: gh auth failed (GITHUB_TOKEN may be invalid)"
+# --- gh CLI token ---
+# gh reads GH_TOKEN from the environment. Write it to the worker's SSH
+# environment file so sshd sessions (which don't inherit Docker env vars)
+# also have it. PermitUserEnvironment is enabled in sshd_config.
+if [ -n "$GH_TOKEN" ]; then
+  echo "GH_TOKEN=$GH_TOKEN" >> /home/worker/.ssh/environment
+  echo "GITHUB_TOKEN=$GH_TOKEN" >> /home/worker/.ssh/environment
+  echo "[hortator] GH_TOKEN set for SSH sessions"
 else
-  echo "[hortator] WARNING: GITHUB_TOKEN not set; gh CLI and HTTPS git will not authenticate"
+  echo "[hortator] WARNING: GH_TOKEN not set; gh CLI will not authenticate"
 fi
 
 # Start sshd in foreground

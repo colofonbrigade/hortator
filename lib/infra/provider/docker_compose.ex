@@ -57,7 +57,8 @@ defmodule Infra.Provider.DockerCompose do
   defp compose_file(config), do: Map.get(config, :compose_file, @default_compose_file)
 
   defp run_compose(file, args) do
-    full_args = ["-f", file | args]
+    env_file = if File.exists?(".env"), do: ["--env-file", ".env"], else: []
+    full_args = env_file ++ ["-f", file | args]
     Logger.debug("docker compose #{Enum.join(full_args, " ")}")
 
     case System.cmd("docker", ["compose" | full_args], stderr_to_stdout: true) do
