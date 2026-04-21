@@ -1,20 +1,20 @@
 ---
 # Workflow for local Docker Compose workers.
 #
-# Hortator runs on the host; agents run inside Docker containers reachable
-# over SSH. The Infra.Provider.DockerCompose provider (PRE-58) manages
-# container lifecycle; until then, start workers manually:
+# Uses git worktrees on a shared Docker volume: one bare clone at
+# workspace_root/.bare, each issue gets a worktree. First issue
+# bootstraps the bare clone; subsequent issues are near-instant.
 #
-#   docker compose -f deploy/docker-compose/docker-compose.yml up -d --scale worker=2
+# Operator flow:
+#   make workers-up
+#   ./bin/hort workflows/docker-compose.md
+#   make workers-down
 #
-# Required env vars (set in your .env alongside LINEAR_API_KEY):
-#
-#   REPO_CLONE_URL      Clone URL for the target repo (SSH or HTTPS)
-#   LINEAR_PROJECT_SLUG Linear project slug
-#   GITHUB_TOKEN        GitHub PAT for gh CLI (PR creation, comments)
-#   HORTATOR_SSH_KEY    Path to SSH private key (default ~/.ssh/id_ed25519)
-#
-# Workspace paths are container-internal: /home/worker/workspaces/<issue-id>.
+# Required env vars (set in your .env):
+#   REPO_CLONE_URL        Clone URL (SSH recommended for push access)
+#   LINEAR_PROJECT_SLUG   Linear project slug
+#   GH_TOKEN              GitHub token for gh CLI (PR creation, comments)
+#   HORTATOR_SSH_PUBKEY   Path to SSH public key for worker access
 
 tracker:
   kind: linear
@@ -45,18 +45,42 @@ claude:
 
 hooks:
   after_create: |
-    # Configure HTTPS credential helper if GITHUB_TOKEN is available
-    if [ -n "$GITHUB_TOKEN" ]; then
-      git config --global credential.helper '!f() { echo "password=${GITHUB_TOKEN}"; }; f'
+    WORKSPACE_ROOT=$(dirname "$PWD")
+    ISSUE_DIR=$(basename "$PWD")
+
+    # Bootstrap bare clone on first use (idempotent)
+    if [ ! -d "$WORKSPACE_ROOT/.bare" ]; then
+      git clone --bare ${REPO_CLONE_URL} "$WORKSPACE_ROOT/.bare"
+      echo "gitdir: ./.bare" > "$WORKSPACE_ROOT/.git"
+      git -C "$WORKSPACE_ROOT" config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
+      git -C "$WORKSPACE_ROOT" config worktree.useRelativePaths true
     fi
-    git clone --depth 1 ${REPO_CLONE_URL} .
+
+    # Fetch latest (shared object store — just a delta)
+    git -C "$WORKSPACE_ROOT" fetch origin
+
+    # Create worktree with a fresh branch from the default branch
+    cd "$WORKSPACE_ROOT"
+    git worktree add "$ISSUE_DIR" -b "issue/$ISSUE_DIR" origin/main
+
+    # Post-checkout setup
+    cd "$ISSUE_DIR"
     if command -v mise >/dev/null 2>&1; then
       mise trust && mise exec -- mix deps.get 2>/dev/null || true
     fi
   before_remove: |
+    WORKSPACE_ROOT=$(dirname "$PWD")
+    ISSUE_DIR=$(basename "$PWD")
+
+    # Close PRs for this branch if gh is available
     if command -v mix >/dev/null 2>&1; then
-      mix workspace.before_remove
+      mix workspace.before_remove 2>/dev/null || true
     fi
+
+    # Remove the worktree (cleans up .bare metadata + deletes the dir)
+    cd "$WORKSPACE_ROOT"
+    git worktree remove "$ISSUE_DIR" --force 2>/dev/null || true
+    git worktree prune 2>/dev/null || true
 
 observability:
   dashboard_enabled: true

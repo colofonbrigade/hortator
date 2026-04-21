@@ -189,3 +189,33 @@ docker compose -f deploy/docker-compose/docker-compose.yml exec worker su - work
 Workers boot without either credential — SSH-only mode works for SSH clone
 URLs without a token, and HTTPS-only mode works with just `GITHUB_TOKEN`.
 `gh` commands fail clearly if the token is absent.
+
+## Git worktree workspace model
+
+Docker Compose workers use a **bare-clone + worktree** pattern instead of
+cloning the repo per issue. This is based on the approach described at
+https://gabri.me/blog/git-worktrees-done-right.
+
+Layout on the shared volume:
+```
+/home/worker/workspaces/
+├── .bare/          # bare clone of the target repo (shared git objects)
+├── .git            # pointer file: "gitdir: ./.bare"
+├── MT-123/         # git worktree for issue MT-123
+├── MT-124/         # git worktree for issue MT-124
+└── MT-125/         # git worktree for issue MT-125
+```
+
+The first issue dispatched to the volume bootstraps the bare clone
+(idempotent guard in `hooks.after_create`). Subsequent issues create
+worktrees from the shared `.bare` — near-instant, no network fetch
+unless the branch target has advanced.
+
+Each worktree is a full working copy with its own branch
+(`issue/<identifier>`). Agents can commit, push, and create PRs
+independently. `git worktree remove` in `hooks.before_remove` cleans
+up both the directory and the worktree metadata.
+
+The `workflows/TEMPLATE.md` still uses `git clone` (simple, no shared
+state). The worktree pattern is used in `workflows/docker-compose.md`
+where workers share a Docker volume.

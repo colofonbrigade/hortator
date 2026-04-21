@@ -22,6 +22,12 @@ polling:
 workspace:
   root: ${WORKSPACE_ROOT}
 hooks:
+  # Clone approach (simple, one clone per issue):
+  #   after_create: |
+  #     git clone --depth 1 ${REPO_CLONE_URL} .
+  #
+  # Worktree approach (shared bare clone, instant workspace creation):
+  #   See workflows/docker-compose.md for the full worktree hooks.
   after_create: |
     git clone --depth 1 ${REPO_CLONE_URL} .
     if command -v mise >/dev/null 2>&1; then
