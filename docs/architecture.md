@@ -146,14 +146,46 @@ Sub-modules are classified into their parent boundary by prefix matching.
 You don't need `use Boundary` on sub-modules unless you're creating a nested
 boundary (which we don't do).
 
-## Infra boundary (planned, not yet implemented)
+## Infra boundary
 
-PRE-57/58/59 introduce an `Infra` boundary for worker-host lifecycle
-management. The design uses a `Infra.Provider` behaviour with implementations:
-- `Infra.Provider.Static` — reads `worker.ssh_hosts` from workflow config (current behavior)
-- `Infra.Provider.DockerCompose` — manages local Docker SSH workers
-- `Infra.Provider.ECS` — manages AWS ECS Fargate tasks (future)
+`Infra.Provider` is the behaviour; implementations:
+- `Infra.Provider.Static` — reads `worker.ssh_hosts` from workflow config
+- `Infra.Provider.DockerCompose` — manages local Docker SSH workers via `docker compose`
+- `Infra.Provider.ECS` — stub for AWS ECS Fargate tasks (future)
+
+`Infra.HostManager` is a GenServer that caches the live host list. WorkerPool
+reads from it on every scheduling decision. Operator commands:
+`mix infra.up`, `mix infra.down`, `mix infra.status`.
 
 Infrastructure definitions (Dockerfiles, compose files, Terraform) live under
 `deploy/`, not `lib/`. The Elixir provider modules only know how to talk to
 the infrastructure, not define it.
+
+## Worker container credentials
+
+Docker Compose workers receive two credential paths, both injected via `.env`
+and docker-compose volume/env mounts:
+
+**SSH key** (for `git clone git@github.com:...` / `git push`):
+- Host key at `HORTATOR_SSH_KEY` (default `~/.ssh/id_ed25519`) is mounted
+  read-only into the container.
+- `entrypoint.sh` copies it to `/home/worker/.ssh/id_ed25519` with correct
+  permissions (Docker bind-mounts don't preserve `chmod 600`).
+- `GIT_SSH_COMMAND` is set to use the key with `StrictHostKeyChecking=no`.
+- `github.com` is added to `known_hosts` via `ssh-keyscan` at container start.
+
+**GitHub token** (for `gh` CLI — PR creation, comments, labels):
+- `GITHUB_TOKEN` from `.env` is passed as both `GITHUB_TOKEN` and `GH_TOKEN`
+  env vars. `gh` reads `GH_TOKEN` automatically without `gh auth login`.
+- For HTTPS clone URLs, the entrypoint configures a git credential helper
+  that returns the token.
+
+**Verify auth inside a running worker:**
+```bash
+docker compose -f deploy/docker-compose/docker-compose.yml exec worker su - worker -c "gh auth status"
+docker compose -f deploy/docker-compose/docker-compose.yml exec worker su - worker -c "ssh -T git@github.com"
+```
+
+Workers boot without either credential — SSH-only mode works for SSH clone
+URLs without a token, and HTTPS-only mode works with just `GITHUB_TOKEN`.
+`gh` commands fail clearly if the token is absent.
