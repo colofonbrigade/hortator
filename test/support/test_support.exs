@@ -9,7 +9,6 @@ defmodule Core.TestSupport do
       alias Agents.Claude.Session
       alias CLI.StatusDashboard, as: Renderer
       alias Core.AgentRunner
-      alias Core.CLI
       alias Core.Config
       alias Core.Orchestrator
       alias Core.PromptBuilder

@@ -12,7 +12,7 @@ defmodule Core.MixProject do
       deps: deps(),
       compilers: [:phoenix_live_view, :boundary] ++ Mix.compilers(),
       listeners: [Phoenix.CodeReloader],
-      escript: escript(),
+      releases: releases(),
       # Coverage threshold relaxed from phx.new's implicit 90%. Tighten as
       # more tests land; the dark corners today are `Web.CoreComponents`
       # (phx-generated UI kit, not worth hand-testing), `Web.Layouts`
@@ -54,12 +54,12 @@ defmodule Core.MixProject do
   defp elixirc_paths(:test), do: ["lib", "test/support"]
   defp elixirc_paths(_), do: ["lib"]
 
-  defp escript do
+  defp releases do
     [
-      app: nil,
-      main_module: Core.CLI,
-      name: "hort",
-      path: "bin/hort"
+      hortator: [
+        include_executables_for: [:unix],
+        applications: [hortator: :permanent]
+      ]
     ]
   end
 

@@ -9,7 +9,6 @@ defmodule Core do
     deps: [CLI, Infra, Schema, Permissions, Transport, Agents, Trackers, Utils, Workflow],
     exports: [
       AgentRunner,
-      CLI,
       Config,
       LogFile,
       ObservabilityPubSub,

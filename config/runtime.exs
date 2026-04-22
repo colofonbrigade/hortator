@@ -14,10 +14,9 @@ config :hortator, Web.Endpoint, http: [port: String.to_integer(System.get_env("P
 # Optional SSH config file path. `Transport.SSH` reads it from Application env.
 config :hortator, :ssh_config, System.get_env("HORTATOR_SSH_CONFIG")
 
-# Workflow-driven endpoint config. The entry point (escript `bin/hort`,
-# `Core.CLI`) sets HORTATOR_WORKFLOW_FILE via `System.put_env/2` before
-# invoking the runtime so this block can load the workflow and populate
-# Application env for the endpoint.
+# Workflow-driven endpoint config. The `bin/hort` wrapper sets
+# HORTATOR_WORKFLOW_FILE before exec'ing the release so this block can
+# load the workflow and populate Application env for the endpoint.
 case System.get_env("HORTATOR_WORKFLOW_FILE") do
   nil ->
     :ok

@@ -38,11 +38,14 @@ Peer backends live under single-purpose top-level boundaries: `Agents.Claude` to
 cp .env.example .env          # fill in LINEAR_API_KEY, LINEAR_PROJECT_SLUG, WORKSPACE_ROOT, REPO_CLONE_URL
 mise install                  # Elixir 1.19 / OTP 28
 mix setup                     # deps + asset pipeline
-mix escript.build             # produces bin/hort
+MIX_ENV=prod mix assets.deploy        # bundle + digest priv/static
+MIX_ENV=prod mix release --overwrite  # assemble _build/prod/rel/hortator
 ./bin/hort --i-understand-that-this-will-be-running-without-the-usual-guardrails workflows/TEMPLATE.md
 ```
 
-`bin/hort` is the single runnable artifact. It reads `workflows/TEMPLATE.md` by default (pass a different path to use another workflow — `workflows/smoke-test.md` ships as an example peer). The workflow YAML front matter expands `${ENV_VAR}` placeholders at load time. See [`AGENTS.md`](AGENTS.md) for conventions and [`docs/`](docs/) for the full ruleset.
+`bin/hort` is a shell wrapper around the prod release at `_build/prod/rel/hortator/bin/hortator`. It requires a workflow path (no default) and expects the guardrails acknowledgement flag first. The wrapper manages a persistent `SECRET_KEY_BASE` cached at `${XDG_CACHE_HOME:-~/.cache}/hortator/secret_key_base`, then `exec`s the release with `HORTATOR_WORKFLOW_FILE` and `PHX_SERVER` exported — `config/runtime.exs` binds the Phoenix endpoint to the workflow's `server.port`.
+
+Other workflows ship as peers (`workflows/smoke-test.md`, `workflows/docker-compose.md`). The workflow YAML front matter expands `${ENV_VAR}` placeholders at load time. See [`AGENTS.md`](AGENTS.md) for conventions and [`docs/`](docs/) for the full ruleset.
 
 ## Credit
 

@@ -16,16 +16,21 @@ composition root). This means:
 - If you see `:core` in an `Application.*_env` call, it's a bug from the
   Symphony port and should be `:hortator`.
 
-## Escript behavior
+## Release packaging
 
-`bin/hort` is an escript. Escripts do **not** evaluate `config/runtime.exs` —
-all config is baked at compile time from `config/config.exs` + `config/dev.exs`.
+`bin/hort` is a shell wrapper around the prod release at
+`_build/prod/rel/hortator/bin/hortator`. It validates the guardrails
+acknowledgement flag, resolves the workflow path to absolute, manages a
+persistent `SECRET_KEY_BASE` cached at `${XDG_CACHE_HOME:-~/.cache}/hortator/`,
+and `exec`s `bin/hortator start` with `HORTATOR_WORKFLOW_FILE` and `PHX_SERVER`
+exported.
 
-The CLI entry point (`Core.CLI`) must call `Application.load(:hortator)`
-**before** any `Application.put_env` calls, then `Application.ensure_all_started`.
-Without the explicit `load`, `ensure_all_started` reloads defaults from the
-`.app` spec and silently wipes any runtime env overrides. This bit us with the
-endpoint not binding the correct port.
+Releases evaluate `config/runtime.exs` at boot, so the workflow file can drive
+the endpoint bind port/host there (see `config/runtime.exs`). `priv/static` is
+bundled into the release tarball, so `Plug.Static` serves digested assets
+without any escript-era workarounds.
+
+Build with `MIX_ENV=prod mix assets.deploy && MIX_ENV=prod mix release --overwrite`.
 
 ## Workflow files
 
@@ -34,9 +39,9 @@ There is no root-level `WORKFLOW.md`. The default workflow is
 `workflows/smoke-test.md`, `workflows/docker-compose.md` (planned), etc.
 
 `Core.Workflow.workflow_file_path/0` defaults to
-`Path.join(File.cwd!(), "workflows/TEMPLATE.md")`. The escript and
-`config/runtime.exs` can override via `HORTATOR_WORKFLOW_FILE` env var
-or `Core.Workflow.set_workflow_file_path/1`.
+`Path.join(File.cwd!(), "workflows/TEMPLATE.md")`. Override via the
+`HORTATOR_WORKFLOW_FILE` env var (read by `config/runtime.exs`) or
+`Core.Workflow.set_workflow_file_path/1` (used by tests).
 
 ## Module size rule
 
